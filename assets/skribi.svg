@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Skribi</title>
+  <desc id="desc">An open page crossed by a writing stroke</desc>
+  <circle cx="64" cy="64" r="60" fill="#F7F4ED"/>
+  <path d="M24 32c17 0 30 8 40 21v47c-10-12-23-18-40-18V32Z" fill="none" stroke="#24221E" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M104 32c-17 0-30 8-40 21v47c10-12 23-18 40-18V32Z" fill="none" stroke="#24221E" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M28 91 104 28" fill="none" stroke="#B97824" stroke-width="8" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,6 @@
+/target
+/dist
+.DS_Store
+*.tmp
+**/tests/snapshots/**/*.diff.png
+**/tests/snapshots/**/*.new.png

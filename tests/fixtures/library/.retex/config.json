@@ -1,0 +1,8 @@
+{
+  "columns": [
+    { "title": "Inbox", "statuses": ["Inbox"] },
+    { "title": "Reading", "statuses": ["Reading"] },
+    { "title": "Proposal", "statuses": ["Proposal"] },
+    { "title": "Done", "statuses": ["Done"] }
+  ]
+}
