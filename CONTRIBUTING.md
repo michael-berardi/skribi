@@ -19,7 +19,7 @@ cargo clippy --all-targets -- -D warnings
 cargo build --release
 ```
 
-For interface changes, also run the native application against `examples/meditations/content` and inspect the Library, Reader, Editor, and Board views at common window sizes.
+For interface changes, also run the native application against `examples/meditations/content` and inspect the Library, Mouseia catalog, Reader, Editor, and Retex views at common window sizes.
 
 ## Pull requests
 

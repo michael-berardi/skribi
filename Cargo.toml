@@ -1,6 +1,6 @@
 [package]
 name = "skribi"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 authors = ["Implose Cybernetics"]
 rust-version = "1.95"
@@ -8,7 +8,7 @@ description = "A calm, local-first reader and editor for Markdown libraries and 
 license = "MIT"
 repository = "https://github.com/michael-berardi/skribi"
 homepage = "https://implosecybernetics.com/software/"
-keywords = ["markdown", "notes", "reader", "kanban", "retex"]
+keywords = ["markdown", "notes", "reader", "catalog", "retex"]
 categories = ["gui", "text-editors"]
 
 [dependencies]
@@ -16,10 +16,12 @@ atomic-write-file = "0.3.1"
 eframe = { version = "0.36.1", default-features = false, features = ["accesskit", "default_fonts", "glow", "persistence", "wayland", "x11"] }
 egui_commonmark = { version = "0.25.0", default-features = false, features = ["pulldown_cmark"] }
 fs2 = "0.4.3"
+fontdb = "0.24"
 rfd = { version = "0.17.2", default-features = false, features = ["xdg-portal"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
+ureq = "3.4"
 zip = { version = "6.0.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 [dev-dependencies]

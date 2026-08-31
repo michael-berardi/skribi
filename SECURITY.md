@@ -12,6 +12,6 @@ You should receive an acknowledgment within five business days. Please allow tim
 
 ## Security boundaries
 
-Skribi is a local desktop application. It does not provide access control, encryption, cloud backup, or malware scanning. A `.skribi` file or imported ZIP remains untrusted input: Skribi rejects path traversal, symlinks, excessive entry counts, oversized entries, and oversized expanded archives, but users should still obtain content from sources they trust.
+Skribi is a local desktop application. It does not provide access control, encryption, cloud backup, or malware scanning. A `.skribi` file, imported ZIP, or Mouseia response remains untrusted input: Skribi rejects path traversal and symlinks, bounds entry counts and archive expansion, validates Mouseia work identifiers, and limits network response sizes. Users should still obtain content from sources they trust.
 
 Markdown links may open external applications or websites through the operating system. Skribi does not execute imported documents, scripts, or attachments.

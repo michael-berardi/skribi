@@ -1,6 +1,7 @@
 pub mod app;
 pub mod document;
 pub mod importer;
+pub mod mouseia;
 pub mod package;
 pub mod theme;
 pub mod vault;

@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 
+export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
+
 OUTPUT=${1:-dist/skribi-universal}
 mkdir -p "$(dirname "$OUTPUT")"
 cargo build --release --target aarch64-apple-darwin
