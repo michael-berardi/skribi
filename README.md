@@ -1,10 +1,37 @@
 # Skribi
 
-**A calm, local-first home for Markdown libraries and Retex vaults.** Skribi reads the files you already own, gives complete works and long documents a focused streaming reader, and keeps editing simple without turning a folder into a proprietary database.
+<p align="center">
+  <strong>A calm, local-first home for Markdown libraries and Retex vaults.</strong><br />
+  Read long works in a focused streaming reader, keep notes as plain files, and never lose them to a proprietary database.
+</p>
 
-Skribi is free and open-source software by [Implose Cybernetics](https://implosecybernetics.com/).
+<p align="center">
+  <a href="https://github.com/michael-berardi/skribi/releases/latest"><img src="https://img.shields.io/github/v/release/michael-berardi/skribi?label=release" alt="Latest release" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/michael-berardi/skribi" alt="MIT License" /></a>
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="macOS, Windows and Linux" />
+  <img src="https://img.shields.io/badge/built%20with-Rust-orange" alt="Built with Rust" />
+</p>
 
-## What ships in 0.1.1
+<p align="center">
+  <a href="https://github.com/michael-berardi/skribi/releases/latest"><strong>Download</strong></a> ·
+  <a href="#start-quickly">Quick start</a> ·
+  <a href="#portable-library-format">Library format</a> ·
+  <a href="PRIVACY.md">Privacy</a>
+</p>
+
+<p align="center">
+  <img src="tests/snapshots/reader_dark.png" alt="Skribi's continuous reader showing Book I of Marcus Aurelius's Meditations on a true-black background" width="820" />
+</p>
+
+Skribi reads the folders you already own. Open a Markdown folder, an Obsidian
+vault or a Retex vault in place, or import a Notion export, and Skribi gives
+complete works and long documents a distraction-free reader with simple
+editing on top. Everything stays ordinary Markdown that any text editor can
+open.
+
+Skribi is free and open-source software by [Implose Cybernetics](https://implosecybernetics.com/software/).
+
+## Features
 
 - **Ordinary Markdown:** open any folder directly; files remain readable in every text editor.
 - **Separate workspaces:** Library holds complete works while the dedicated Retex tab opens a vault as a collapsible folder tree. Either workspace can be unloaded independently.
@@ -17,11 +44,19 @@ Skribi is free and open-source software by [Implose Cybernetics](https://implose
 - **Library packages:** export and import `.skribi` files. They are safe, bounded ZIP archives containing `library.json`, ordinary Markdown, and assets.
 - **Local-first:** no account, sync service, telemetry, or advertising. Opening a Library fetches the public Mouseia catalog index; adding a work fetches that work’s original text and translations.
 
-Skribi 0.1.1 supports macOS, Windows, and Linux. It reads Markdown and Notion CSV tables; it does not render EPUB or PDF files.
+Skribi supports macOS, Windows, and Linux. It reads Markdown and Notion CSV tables; it does not render EPUB or PDF files.
 
 ## Install
 
-Download the archive for your platform and the optional `Meditations.skribi` example from the [latest release](https://github.com/michael-berardi/skribi/releases/latest). Verify it against `SHA256SUMS` before opening it.
+Download the build for your platform from the [latest release](https://github.com/michael-berardi/skribi/releases/latest) and verify it against `SHA256SUMS`.
+
+| System | Download |
+| --- | --- |
+| macOS (Apple Silicon and Intel) | `Skribi-<version>-macos-universal.dmg`, signed and notarized |
+| Windows x86_64 | `Skribi-<version>-windows-x86_64.zip` |
+| Linux x86_64 | `Skribi-<version>-linux-x86_64.tar.gz` |
+
+`Meditations.skribi` is an optional example library you can open with **Import → Skribi library**.
 
 ### Build from source
 
@@ -94,6 +129,6 @@ cargo clippy --all-targets -- -D warnings
 cargo build --release
 ```
 
-GitHub Actions are intentionally not used. Release artifacts are built, signed where the platform supports signing, checked locally, and uploaded with immutable SHA-256 checksums.
+Release artifacts are built and checked locally, signed where the platform supports it, and published with SHA-256 checksums.
 
 Contributions are welcome under [CONTRIBUTING.md](CONTRIBUTING.md). Skribi is licensed under the [MIT License](LICENSE).
