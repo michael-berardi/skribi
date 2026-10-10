@@ -33,7 +33,7 @@ cat > "$CONTENTS/Info.plist" <<PLIST
   <key>CFBundleDevelopmentRegion</key><string>en</string>
   <key>CFBundleDisplayName</key><string>Skribi</string>
   <key>CFBundleExecutable</key><string>Skribi</string>
-  <key>CFBundleIdentifier</key><string>com.implosecybernetics.skribi</string>
+  <key>CFBundleIdentifier</key><string>com.paretocybernetics.skribi</string>
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
   <key>CFBundleName</key><string>Skribi</string>
   <key>CFBundleIconFile</key><string>Skribi</string>

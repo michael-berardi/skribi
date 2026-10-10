@@ -2,12 +2,12 @@
 name = "skribi"
 version = "0.1.1"
 edition = "2024"
-authors = ["Implose Cybernetics"]
+authors = ["Pareto Cybernetics"]
 rust-version = "1.95"
 description = "A calm, local-first reader and editor for Markdown libraries and Retex vaults"
 license = "MIT"
 repository = "https://github.com/michael-berardi/skribi"
-homepage = "https://implosecybernetics.com/software/"
+homepage = "https://paretocybernetics.com/software/"
 keywords = ["markdown", "notes", "reader", "catalog", "retex"]
 categories = ["gui", "text-editors"]
 

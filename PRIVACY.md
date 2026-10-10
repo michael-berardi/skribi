@@ -6,7 +6,7 @@ Skribi is local-first software.
 - No analytics, telemetry, advertising, or tracking.
 - No background network service.
 - No document upload or cloud sync.
-- No collection by Implose Cybernetics through the application.
+- No collection by Pareto Cybernetics through the application.
 
 Skribi reads and writes only the folders and files you choose through the operating-system file picker, launch argument, or an explicit Mouseia download. It stores the last opened Library and Retex paths plus hidden Mouseia recommendation IDs in the operating system’s normal application-data location. Retex-compatible edits may create `.retex/history.jsonl` and lock files inside the selected folder.
 

@@ -64,7 +64,7 @@ pub fn export_library(
         version: 1,
         name: name.trim().to_owned(),
         description: description.trim().to_owned(),
-        created_by: "Skribi by Implose Cybernetics".into(),
+        created_by: "Skribi by Pareto Cybernetics".into(),
         documents,
         license: None,
     };

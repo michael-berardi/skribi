@@ -29,7 +29,7 @@ complete works and long documents a distraction-free reader with simple
 editing on top. Everything stays ordinary Markdown that any text editor can
 open.
 
-Skribi is free and open-source software by [Implose Cybernetics](https://implosecybernetics.com/software/).
+Skribi is free and open-source software by [Pareto Cybernetics](https://paretocybernetics.com/software/).
 
 ## Features
 
