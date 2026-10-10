@@ -51,7 +51,9 @@ pub fn import_source(
     ));
     let import_root = if is_zip {
         extract_zip(source, &temporary)?;
-        single_content_root(&temporary)
+        // Canonical like the folder branch: on macOS the temp dir is under /var, a symlink to /private/var,
+        // and every extracted file is compared against this root after canonicalization.
+        single_content_root(&temporary).canonicalize()?
     } else {
         let metadata = fs::symlink_metadata(source)?;
         if metadata.file_type().is_symlink() || !metadata.is_dir() {

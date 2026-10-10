@@ -10,7 +10,27 @@ fn book_fixture() -> PathBuf {
 }
 
 fn retex_fixture() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/library")
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/library");
+    pin_fixture_times(&root);
+    root
+}
+
+/// The vault lists notes newest first, and a fresh checkout gives every fixture the same time, so the first
+/// note (and every snapshot of it) would depend on the checkout. Pin the order the snapshots were taken with.
+fn pin_fixture_times(root: &std::path::Path) {
+    let base = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_767_225_600);
+    for (offset, name) in [
+        (0, "commonplace.md"),
+        (60, "meditations.md"),
+        (120, "proposal.md"),
+    ] {
+        let file = std::fs::File::options()
+            .write(true)
+            .open(root.join(name))
+            .expect("fixture note");
+        file.set_modified(base + std::time::Duration::from_secs(offset))
+            .expect("set fixture time");
+    }
 }
 
 fn harness(root: PathBuf, theme: Theme, view: View) -> Harness<'static, SkribiApp> {
