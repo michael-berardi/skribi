@@ -132,3 +132,7 @@ cargo build --release
 Release artifacts are built and checked locally, signed where the platform supports it, and published with SHA-256 checksums.
 
 Contributions are welcome under [CONTRIBUTING.md](CONTRIBUTING.md). Skribi is licensed under the [MIT License](LICENSE).
+
+---
+
+Part of [Pareto Cybernetics](https://paretocybernetics.com/): free, private, open-source tools for working with AI agents.
