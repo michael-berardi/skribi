@@ -9,6 +9,25 @@ fi
 : "${SKRIBI_SIGN_IDENTITY:?set SKRIBI_SIGN_IDENTITY to a Developer ID Application identity}"
 : "${SKRIBI_NOTARY_PROFILE:?set SKRIBI_NOTARY_PROFILE to an existing notarytool keychain profile}"
 
+# Preserve stapler's final exit status while tolerating transient service errors.
+staple_with_retry() {
+  attempt=1
+  while :; do
+    if xcrun stapler staple "$1"; then
+      break
+    else
+      status=$?
+    fi
+    if [ "$attempt" -ge 6 ]; then
+      return "$status"
+    fi
+    echo "Stapling failed (status $status); retrying in 20 seconds ($attempt/6)" >&2
+    sleep 20
+    attempt=$((attempt + 1))
+  done
+  xcrun stapler validate "$1"
+}
+
 VERSION=$1
 BINARY=$2
 OUTPUT=$3
@@ -49,12 +68,10 @@ codesign --force --options runtime --timestamp --sign "$SKRIBI_SIGN_IDENTITY" "$
 codesign --verify --deep --strict --verbose=2 "$APP"
 ditto -c -k --keepParent "$APP" "$NOTARY_ZIP"
 xcrun notarytool submit "$NOTARY_ZIP" --keychain-profile "$SKRIBI_NOTARY_PROFILE" --wait
-xcrun stapler staple "$APP"
-xcrun stapler validate "$APP"
+staple_with_retry "$APP"
 hdiutil create -volname Skribi -srcfolder "$APP" -ov -format UDZO "$DMG"
 codesign --force --timestamp --sign "$SKRIBI_SIGN_IDENTITY" "$DMG"
 xcrun notarytool submit "$DMG" --keychain-profile "$SKRIBI_NOTARY_PROFILE" --wait
-xcrun stapler staple "$DMG"
-xcrun stapler validate "$DMG"
+staple_with_retry "$DMG"
 rm -f "$NOTARY_ZIP"
 printf '%s\n' "$DMG"

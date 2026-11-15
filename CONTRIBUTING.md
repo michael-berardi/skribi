@@ -21,6 +21,17 @@ cargo build --release
 
 For interface changes, also run the native application against `examples/meditations/content` and inspect the Library, Mouseia catalog, Reader, Editor, and Retex views at common window sizes.
 
+## Linux release cross-build
+
+With the default Colima profile running on Apple Silicon, run
+`scripts/build-linux-cross.sh`. It uses a native ARM64 Rust 1.95 Debian 11
+container and the AMD64 cross toolchain/native libraries, with at most four
+build jobs; the container is removed on exit. Bullseye security packages now
+come from Debian's archive (whose expired metadata is allowed, but signatures
+are still verified). The script prints the binary's highest required GLIBC
+symbol version; update the README download table to match before packaging
+with `scripts/package-release.py linux-x86_64 VERSION BINARY OUTPUT`.
+
 ## Pull requests
 
 Describe the user-visible problem, the chosen fix, affected file formats, and exact verification performed. Include native-resolution screenshots for visual changes. Never commit credentials, personal paths, generated release artifacts, or private operational documentation.
