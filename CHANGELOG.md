@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5
+
+- Security: updated the archive, Markdown and TLS libraries. No behaviour change.
+
 ## 0.1.4
 
 - Fix a crash when importing Notion files with long non-ASCII names.
