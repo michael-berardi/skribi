@@ -4,6 +4,6 @@
 
 - Fix a crash when importing Notion files with long non-ASCII names.
 - Clarify import exclusions, storage behavior, and installation instructions.
-- macOS universal and Windows x86_64 downloads are available. Linux users must build from source for this version; no Linux binary is included.
+- macOS universal, Windows x86_64, and Linux x86_64 (glibc 2.35+) downloads are available.
 
 To upgrade, replace the installed application with the new download.

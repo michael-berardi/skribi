@@ -20,17 +20,18 @@ Skribi is free and open-source software by [Pareto Cybernetics](https://paretocy
 ## Install
 
 [Download Skribi](https://github.com/michael-berardi/skribi/releases/latest)
-and [SHA256SUMS](https://github.com/michael-berardi/skribi/releases/latest/download/SHA256SUMS) for macOS or Windows; no source build is needed.
+and [SHA256SUMS](https://github.com/michael-berardi/skribi/releases/latest/download/SHA256SUMS) for macOS, Windows, or Linux; no source build is needed.
 Verify the download against the checksum before opening it.
 
 | System | Download |
 | --- | --- |
 | macOS 13+ (Apple Silicon and Intel) | [Skribi-0.1.4-macos-universal.dmg](https://github.com/michael-berardi/skribi/releases/download/v0.1.4/Skribi-0.1.4-macos-universal.dmg) |
 | Windows x86_64 | [Skribi-0.1.4-windows-x86_64.zip](https://github.com/michael-berardi/skribi/releases/download/v0.1.4/Skribi-0.1.4-windows-x86_64.zip) |
-| Linux x86_64 | Build from source (no Linux binary for 0.1.4) |
+| Linux x86_64 (glibc 2.35+) | [Skribi-0.1.4-linux-x86_64.tar.gz](https://github.com/michael-berardi/skribi/releases/download/v0.1.4/Skribi-0.1.4-linux-x86_64.tar.gz) |
 
 On macOS, open the disk image and copy Skribi to Applications. On Windows,
-extract the archive and run `skribi.exe`. The macOS packaging
+extract the archive and run `skribi.exe`. On Linux, extract the archive and run
+`./skribi` in a graphical desktop session. The macOS packaging
 script signs and notarizes the app and disk image.
 
 ## First use
