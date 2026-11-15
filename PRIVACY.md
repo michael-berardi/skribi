@@ -8,7 +8,7 @@ Skribi is local-first software.
 - No document upload or cloud sync.
 - No collection by Pareto Cybernetics through the application.
 
-Skribi reads and writes only the folders and files you choose through the operating-system file picker, launch argument, or an explicit Mouseia download. It stores the last opened Library and Retex paths plus hidden Mouseia recommendation IDs in the operating system’s normal application-data location. Retex-compatible edits may create `.retex/history.jsonl` and lock files inside the selected folder.
+Skribi opens document folders selected through the file picker, launch argument, environment variables, or saved workspace paths. Imports write into the selected destination; ZIP imports also extract into temporary storage. It stores the last opened Library and Retex paths plus hidden Mouseia recommendation IDs in the operating system’s normal application-data location. Retex-compatible edits may create `.retex/history.jsonl` and lock files inside the selected folder.
 
 Opening a Library requests the public work index from `https://mouseia.org/api/works` for the catalog UI. Choosing **Add** requests that work and writes it into the selected Library. Skribi sends no document contents, account identity, analytics identifier, or telemetry to Mouseia. Opening an external Markdown link may pass the URL to your operating system and default browser. Resulting requests are governed by the destination’s privacy policy.
 

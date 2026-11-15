@@ -283,14 +283,26 @@ fn normalized_paths(
     Ok(result)
 }
 
+#[test]
+fn preserves_long_unicode_notion_names() {
+    let name = format!("{}.md", "界".repeat(17));
+    assert_eq!(strip_notion_id(&name), name);
+    assert_eq!(
+        strip_notion_id("界 0123456789abcdef0123456789abcdef.md"),
+        "界.md"
+    );
+}
+
 fn strip_notion_id(component: &str) -> String {
     let (stem, extension) = component
         .rsplit_once('.')
         .map_or((component, ""), |(stem, extension)| (stem, extension));
     let stripped = if stem.len() >= 33 {
         let split = stem.len() - 32;
-        let (prefix, candidate) = stem.split_at(split);
-        if candidate.bytes().all(|byte| byte.is_ascii_hexdigit()) && prefix.ends_with([' ', '-']) {
+        if let Some((prefix, candidate)) = stem.split_at_checked(split)
+            && candidate.bytes().all(|byte| byte.is_ascii_hexdigit())
+            && prefix.ends_with([' ', '-'])
+        {
             prefix.trim_end_matches([' ', '-']).trim()
         } else {
             stem

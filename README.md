@@ -1,138 +1,98 @@
 # Skribi
 
-<p align="center">
-  <strong>A calm, local-first home for Markdown libraries and Retex vaults.</strong><br />
-  Read long works in a focused streaming reader, keep notes as plain files, and never lose them to a proprietary database.
-</p>
-
-<p align="center">
-  <a href="https://github.com/michael-berardi/skribi/releases/latest"><img src="https://img.shields.io/github/v/release/michael-berardi/skribi?label=release" alt="Latest release" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/michael-berardi/skribi" alt="MIT License" /></a>
-  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="macOS, Windows and Linux" />
-  <img src="https://img.shields.io/badge/built%20with-Rust-orange" alt="Built with Rust" />
-</p>
-
-<p align="center">
-  <a href="https://github.com/michael-berardi/skribi/releases/latest"><strong>Download</strong></a> ·
-  <a href="#start-quickly">Quick start</a> ·
-  <a href="#portable-library-format">Library format</a> ·
-  <a href="PRIVACY.md">Privacy</a>
-</p>
+Skribi is a desktop reader and editor for Markdown libraries and Retex vaults.
+Read long works in a continuous, chapter-aware view while keeping notes as plain
+files. Open an existing Markdown or Obsidian folder, or import a Notion export.
 
 <p align="center">
   <img src="tests/snapshots/reader_dark.png" alt="Skribi's continuous reader showing Book I of Marcus Aurelius's Meditations on a true-black background" width="820" />
 </p>
 
-Skribi reads the folders you already own. Open a Markdown folder, an Obsidian
-vault or a Retex vault in place, or import a Notion export, and Skribi gives
-complete works and long documents a distraction-free reader with simple
-editing on top. Everything stays ordinary Markdown that any text editor can
-open.
-
-Skribi is free and open-source software by [Pareto Cybernetics](https://paretocybernetics.com/software/).
-
-## Features
-
-- **Ordinary Markdown:** open any folder directly; files remain readable in every text editor.
-- **Separate workspaces:** Library holds complete works while the dedicated Retex tab opens a vault as a collapsible folder tree. Either workspace can be unloaded independently.
-- **Retex compatibility:** YAML front matter, atomic edits, stale-write protection, and `.retex/history.jsonl` undo entries use Retex-compatible contracts. Retex is not required.
-- **Obsidian support:** open a vault in place or import a clean copy while preserving Markdown, folders, attachments, and wikilinks. `.obsidian` settings are not copied.
-- **Notion support:** import a Notion Markdown & CSV ZIP export; remove export IDs from names, repair affected links, preserve assets, and convert CSV databases to Markdown tables.
-- **Continuous reading:** chapters stream through one virtualized document surface. The reader includes chapter navigation, a single-edition translation selector, adjustable text size, and six typefaces with multilingual system fallbacks.
-- **Mouseia catalog:** browse complete public-domain works by category, hide recommendations locally, or download a work with its original text and every available translation from [mouseia.org](https://mouseia.org/).
-- **Adaptive appearance:** the light palette and true-black OLED-friendly dark palette follow the operating-system theme.
-- **Library packages:** export and import `.skribi` files. They are safe, bounded ZIP archives containing `library.json`, ordinary Markdown, and assets.
-- **Local-first:** no account, sync service, telemetry, or advertising. Opening a Library fetches the public Mouseia catalog index; adding a work fetches that work’s original text and translations.
-
-Skribi supports macOS, Windows, and Linux. It reads Markdown and Notion CSV tables; it does not render EPUB or PDF files.
-
 ## Install
 
-Download the build for your platform from the [latest release](https://github.com/michael-berardi/skribi/releases/latest) and verify it against `SHA256SUMS`.
+Download your platform’s build and `SHA256SUMS` from the
+[latest release](https://github.com/michael-berardi/skribi/releases/latest).
+Verify the download against the checksum before opening it.
 
 | System | Download |
 | --- | --- |
-| macOS (Apple Silicon and Intel) | `Skribi-<version>-macos-universal.dmg`, signed and notarized |
+| macOS 13+ (Apple Silicon and Intel) | `Skribi-<version>-macos-universal.dmg` |
 | Windows x86_64 | `Skribi-<version>-windows-x86_64.zip` |
 | Linux x86_64 | `Skribi-<version>-linux-x86_64.tar.gz` |
 
-`Meditations.skribi` is an optional example library you can open with **Import → Skribi library**.
+On macOS, open the disk image and copy Skribi to Applications. On Windows or
+Linux, extract the archive and run `skribi.exe` or `skribi`. The macOS packaging
+script signs and notarizes the app and disk image.
 
-### Build from source
+## First use
 
-Requirements: Rust 1.95 or newer and the native window-system packages required by `eframe` on your platform.
+1. Select **Open library folder** and choose a folder containing Markdown files.
+2. Select a document, then use **Read / Edit**. The reader offers chapter navigation,
+   edition selection, adjustable text size, and six typefaces.
+3. Use **Retex → Open Retex vault** for a separate notes workspace.
+4. Use **Export library** to save a portable `.skribi` package.
+
+For an example, download `Meditations.skribi` from the release and choose
+**Import → Skribi library**. The same reading library is in
+`examples/meditations/content`.
+
+## Imports and storage
+
+- Open Obsidian vaults in place, or use **Import → Obsidian or Markdown folder**
+  to copy their Markdown and attachments. Dot-prefixed files and folders,
+  including `.obsidian` settings, are omitted from folder imports.
+  Wikilink text is preserved; this is not a promise of Obsidian plugin support.
+- **Import → Notion ZIP** accepts Markdown & CSV exports. It removes export IDs
+  from names, rewrites matching names in text, preserves assets, and creates
+  Markdown tables alongside CSV files.
+- Imports require a new or empty destination. ZIP imports reject symlink entries
+  and unsafe paths, with limits of 100,000 entries, 64 MiB per entry, and 1 GiB
+  expanded size. An interrupted import can leave a partially populated destination.
+- A `.skribi` package is a ZIP containing `library.json` (format version 1) and
+  `content/` with Markdown and assets. Extract `content/` to recover plain files.
+  Exports omit dot-prefixed paths and `target` directories.
+- Edits preserve unknown front-matter fields and use atomic writes, stale-write
+  checks, and Retex-compatible `.retex/history.jsonl` entries.
+
+Skribi reads Markdown; it does not render EPUB or PDF. Its light and dark palettes
+follow the system theme. The Mouseia catalog offers works and their available
+translations, with locally hidden recommendations.
+
+## Privacy
+
+No account, analytics, advertising, document upload, or cloud sync. Opening a
+Library fetches the public catalog from [mouseia.org](https://mouseia.org/);
+adding a work fetches its text. External Markdown links may open a browser.
+Settings remember workspace paths and hidden recommendations; ZIP imports use
+temporary storage. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
+
+## Build from source
+
+Requires Rust 1.95+ and the native window-system packages needed by `eframe`.
 
 ```sh
 git clone https://github.com/michael-berardi/skribi.git
 cd skribi
-cargo run --release
+cargo build --release -j4
 ```
 
-Open a specific library at launch:
-
-```sh
-cargo run --release -- /path/to/library
-```
-
-Set `SKRIBI_RETEX=/path/to/vault` to open a separate Retex vault at launch.
-
-## Start quickly
-
-1. Select **Open library folder** to use a Markdown or MOUSEIA folder as a reading library.
-2. Select **Retex → Open Retex vault** to browse a notes vault as a hierarchical tree.
-3. Select **Import → Notion ZIP** for a Notion `Markdown & CSV` export.
-4. Select **Import → Skribi library** for a `.skribi` package.
-5. Use **Read / Edit** for the selected document and **Export library** to make a portable `.skribi` package without changing the source folder.
-
-Skribi refuses import symlinks, path traversal, more than 100,000 entries, files above 64 MiB, and archives expanding beyond 1 GiB. Import destinations must be new or empty, so an import cannot silently overwrite existing work.
-
-## Portable library format
-
-A `.skribi` file is a ZIP-compatible archive:
-
-```text
-library.json
-content/
-  document.md
-  images/
-    cover.png
-```
-
-`library.json` identifies format version 1 and lists Markdown documents. Extracting `content/` produces a normal folder; no Skribi runtime is needed to recover or edit it.
-
-The repository includes `examples/meditations`, a public-domain reading library with Marcus Aurelius in the original Greek plus the C. R. Haines (1916) and George Long (1862) translations. The release publishes the same content as `Meditations.skribi`.
-
-## Data and privacy
-
-Skribi reads and writes only folders you choose. It has no analytics, advertising, account system, cloud sync, or background network service. Opening a Library requests the public work index from `mouseia.org`; adding a Mouseia work requests that work’s text. Opening a Markdown link may hand that URL to the operating system. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
+Run `target/release/skribi` (`target/release/skribi.exe` on Windows). An optional
+first argument selects the library folder. Without it, `SKRIBI_LIBRARY` takes
+precedence over the saved library path. `SKRIBI_RETEX` selects a separate vault.
 
 ## Development
 
-The deterministic headless UI harness renders the real `eframe` app at 1280 × 800 against the complete 774 KiB *Meditations* corpus: original Greek plus both translations, all twelve books. It exercises the welcome, library, Retex tree, reader, Book XII, and full-text editor states in both palettes, checks that primary content intersects the viewport, and compares GPU snapshots.
-
-```sh
-cargo test headless_visual_matrix -- --nocapture
-```
-
-After an intentional visual change, inspect every generated image before accepting new baselines:
-
-```sh
-UPDATE_SNAPSHOTS=true cargo test headless_visual_matrix -- --nocapture
-```
-
-Run the complete local gate before release:
-
 ```sh
 cargo fmt --check
-cargo test
-cargo clippy --all-targets -- -D warnings
-cargo build --release
+cargo test -j4
+cargo clippy -j4 --all-targets -- -D warnings
+cargo build --release -j4
 ```
 
-Release artifacts are built and checked locally, signed where the platform supports it, and published with SHA-256 checksums.
+The headless GPU test `headless_visual_matrix` checks reader, editor, library,
+Retex, and welcome states at 1280 × 800 using the bundled reading corpus.
+Run it alone with `cargo test -j4 headless_visual_matrix -- --nocapture`.
+After intentional visual changes, prefix that command with
+`UPDATE_SNAPSHOTS=true` and inspect every generated image before accepting it.
 
-Contributions are welcome under [CONTRIBUTING.md](CONTRIBUTING.md). Skribi is licensed under the [MIT License](LICENSE).
-
----
-
-Part of [Pareto Cybernetics](https://paretocybernetics.com/): free, private, open-source tools for working with AI agents.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Licensed under [MIT](LICENSE).
