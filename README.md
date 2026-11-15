@@ -1,5 +1,12 @@
 # Skribi
 
+<p align="center">
+  <a href="https://github.com/michael-berardi/skribi/releases/latest"><img src="https://img.shields.io/github/v/release/michael-berardi/skribi?label=release" alt="Latest release" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/michael-berardi/skribi" alt="MIT License" /></a>
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="macOS, Windows and Linux" />
+  <img src="https://img.shields.io/badge/built%20with-Rust-orange" alt="Built with Rust" />
+</p>
+
 Skribi is a desktop reader and editor for Markdown libraries and Retex vaults.
 Read long works in a continuous, chapter-aware view while keeping notes as plain
 files. Open an existing Markdown or Obsidian folder, or import a Notion export.
@@ -8,20 +15,22 @@ files. Open an existing Markdown or Obsidian folder, or import a Notion export.
   <img src="tests/snapshots/reader_dark.png" alt="Skribi's continuous reader showing Book I of Marcus Aurelius's Meditations on a true-black background" width="820" />
 </p>
 
+Skribi is free and open-source software by [Pareto Cybernetics](https://paretocybernetics.com/software/).
+
 ## Install
 
-Download your platform’s build and `SHA256SUMS` from the
-[latest release](https://github.com/michael-berardi/skribi/releases/latest).
+[Download Skribi](https://github.com/michael-berardi/skribi/releases/latest)
+and [SHA256SUMS](https://github.com/michael-berardi/skribi/releases/latest/download/SHA256SUMS) for macOS or Windows; no source build is needed.
 Verify the download against the checksum before opening it.
 
 | System | Download |
 | --- | --- |
-| macOS 13+ (Apple Silicon and Intel) | `Skribi-<version>-macos-universal.dmg` |
-| Windows x86_64 | `Skribi-<version>-windows-x86_64.zip` |
-| Linux x86_64 | `Skribi-<version>-linux-x86_64.tar.gz` |
+| macOS 13+ (Apple Silicon and Intel) | [Skribi-0.1.4-macos-universal.dmg](https://github.com/michael-berardi/skribi/releases/download/v0.1.4/Skribi-0.1.4-macos-universal.dmg) |
+| Windows x86_64 | [Skribi-0.1.4-windows-x86_64.zip](https://github.com/michael-berardi/skribi/releases/download/v0.1.4/Skribi-0.1.4-windows-x86_64.zip) |
+| Linux x86_64 | Build from source (no Linux binary for 0.1.4) |
 
-On macOS, open the disk image and copy Skribi to Applications. On Windows or
-Linux, extract the archive and run `skribi.exe` or `skribi`. The macOS packaging
+On macOS, open the disk image and copy Skribi to Applications. On Windows,
+extract the archive and run `skribi.exe`. The macOS packaging
 script signs and notarizes the app and disk image.
 
 ## First use
@@ -96,3 +105,7 @@ After intentional visual changes, prefix that command with
 `UPDATE_SNAPSHOTS=true` and inspect every generated image before accepting it.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Licensed under [MIT](LICENSE).
+
+---
+
+Part of [Pareto Cybernetics](https://paretocybernetics.com/): free, private, open-source tools for working with AI agents.
