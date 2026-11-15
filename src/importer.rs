@@ -160,9 +160,10 @@ fn extract_zip(source: &Path, destination: &Path) -> Result<PathBuf> {
     fs::create_dir_all(destination)?;
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index)?;
+        let name = entry.name()?;
         let relative = entry
             .enclosed_name()
-            .ok_or_else(|| Error::Invalid(format!("Unsafe ZIP entry: {}", entry.name())))?;
+            .ok_or_else(|| Error::Invalid(format!("Unsafe ZIP entry: {name}")))?;
         let target = destination.join(relative);
         if entry.is_dir() {
             fs::create_dir_all(&target)?;
@@ -179,7 +180,7 @@ fn extract_zip(source: &Path, destination: &Path) -> Result<PathBuf> {
 }
 
 fn validate_zip_entry(entry: &zip::read::ZipFile<'_, File>) -> Result<()> {
-    let name = entry.name();
+    let name = entry.name()?;
     let enclosed = entry
         .enclosed_name()
         .ok_or_else(|| Error::Invalid(format!("Unsafe ZIP entry: {name}")))?;

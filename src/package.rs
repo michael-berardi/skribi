@@ -114,7 +114,7 @@ pub fn import_library(package: &Path, destination: &Path) -> Result<LibraryManif
         let Some(enclosed) = entry.enclosed_name() else {
             return Err(Error::Invalid(format!(
                 "Unsafe package entry: {}",
-                entry.name()
+                entry.name()?
             )));
         };
         let Ok(relative) = enclosed.strip_prefix("content") else {
@@ -194,7 +194,7 @@ fn validate_archive(archive: &mut ZipArchive<File>) -> Result<()> {
     let mut total = 0_u64;
     for index in 0..archive.len() {
         let entry = archive.by_index(index)?;
-        let name = entry.name();
+        let name = entry.name()?;
         let enclosed = entry
             .enclosed_name()
             .ok_or_else(|| Error::Invalid(format!("Unsafe archive entry: {name}")))?;
