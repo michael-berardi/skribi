@@ -228,13 +228,22 @@ fn inventory_markdown(
         if metadata.is_symlink() {
             diagnostics.push(format!("Skipped symlink: {}", path.display()));
         } else if metadata.is_dir() {
-            inventory_markdown(root, &path, paths, diagnostics)?;
+            // One unreadable subfolder must not stop the rest of the library from opening.
+            if let Err(error) = inventory_markdown(root, &path, paths, diagnostics) {
+                diagnostics.push(format!("{}: {error}", path.display()));
+            }
         } else if metadata.is_file()
             && path
                 .extension()
                 .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
         {
-            let canonical = path.canonicalize()?;
+            let canonical = match path.canonicalize() {
+                Ok(canonical) => canonical,
+                Err(error) => {
+                    diagnostics.push(format!("{}: {error}", path.display()));
+                    continue;
+                }
+            };
             if canonical.starts_with(root) {
                 paths.push(canonical);
             } else {

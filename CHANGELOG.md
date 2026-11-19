@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.6
+
+- Leaving the editor saves your changes, so Read always shows what you wrote.
+- A save that fails now says why in the editor bar and keeps the note open, instead of switching to another note.
+- Opening or importing another folder saves the open note first. Reload from disk is labelled "Discard edits and reload" when there are unsaved edits.
+- One unreadable subfolder no longer stops a library from opening; skipped files are named.
+- A note whose text starts with its own title shows the title once.
+- Search fields have a visible outline. Empty libraries, empty vaults and searches with no matches say so.
+- Messages in the top bar show their text instead of "Saved" or "Issue".
+- Shortcuts: Cmd+O open a folder, Cmd+F search, Cmd+N new note, Cmd+E switch between Read and Edit.
+- Long titles in the reader bar are shortened instead of wrapping.
+
 ## 0.1.5
 
 - Security: updated the archive, Markdown and TLS libraries. No behaviour change.

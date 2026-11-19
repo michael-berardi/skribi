@@ -249,7 +249,8 @@ impl ReaderBlock {
         let sections = document.reading_sections();
         let mut blocks = Vec::new();
         if sections.is_empty() {
-            for (chunk_index, body) in reader_chunks(&document.body).into_iter().enumerate() {
+            let body = without_leading_title(&document.body, &document.title);
+            for (chunk_index, body) in reader_chunks(body).into_iter().enumerate() {
                 blocks.push(Self {
                     section: 0,
                     chapter: 0,
@@ -323,6 +324,54 @@ impl ReaderBlock {
             }
             + 120.0
     }
+}
+
+/// The reader draws the title itself, so a body that opens with the same heading would show it twice.
+fn without_leading_title<'a>(body: &'a str, title: &str) -> &'a str {
+    let trimmed = body.trim_start();
+    let (first, rest) = trimmed.split_once('\n').unwrap_or((trimmed, ""));
+    match first.strip_prefix("# ") {
+        Some(heading) if heading.trim() == title.trim() => rest,
+        _ => body,
+    }
+}
+
+fn notice_label(ui: &mut egui::Ui, notice: Option<&(String, bool)>, colors: &theme::Palette) {
+    if let Some((message, success)) = notice {
+        ui.add(
+            egui::Label::new(RichText::new(message).size(11.0).color(if *success {
+                colors.green
+            } else {
+                colors.red
+            }))
+            .truncate(),
+        )
+        .on_hover_text(message);
+    }
+}
+
+fn search_field(ui: &mut egui::Ui, text: &mut String, hint: &str, width: Option<f32>, focus: bool) {
+    let colors = theme::palette(ui);
+    let width = width.unwrap_or_else(|| ui.available_width());
+    // A fixed box: a centred parent row would otherwise stretch the frame to the row height.
+    ui.allocate_ui_with_layout(Vec2::new(width, 30.0), Layout::top_down(Align::Min), |ui| {
+        egui::Frame::new()
+            .fill(colors.raised)
+            .stroke(egui::Stroke::new(1.0, colors.hairline))
+            .corner_radius(egui::CornerRadius::same(6))
+            .inner_margin(egui::Margin::symmetric(8, 4))
+            .show(ui, |ui| {
+                let response = ui.add(
+                    TextEdit::singleline(text)
+                        .hint_text(hint)
+                        .frame(egui::Frame::NONE)
+                        .desired_width(f32::INFINITY),
+                );
+                if focus {
+                    response.request_focus();
+                }
+            });
+    });
 }
 
 fn reader_chunks(markdown: &str) -> Vec<String> {
@@ -401,6 +450,7 @@ pub struct SkribiApp {
     view: View,
     selected: Option<PathBuf>,
     search: String,
+    focus_search: bool,
     editing: bool,
     reader_open: bool,
     reader_sidebar_open: bool,
@@ -490,6 +540,7 @@ impl SkribiApp {
             view: View::Library,
             selected: None,
             search: String::new(),
+            focus_search: false,
             editing: false,
             reader_open: false,
             reader_sidebar_open: false,
@@ -563,10 +614,12 @@ impl SkribiApp {
                 if let Some(path) = first {
                     self.load_selected(path);
                 }
-                self.notice = is_obsidian.then(|| (
-                    "Obsidian vault opened directly. Markdown, folders, attachments, and wikilinks stay in place.".into(),
-                    true,
-                ));
+                self.notice = self.skipped_files_notice().or_else(|| {
+                    is_obsidian.then(|| (
+                        "Obsidian vault opened directly. Markdown, folders, attachments, and wikilinks stay in place.".into(),
+                        true,
+                    ))
+                });
                 #[cfg(not(test))]
                 self.mouseia.load_catalog();
             }
@@ -590,10 +643,24 @@ impl SkribiApp {
                 if let Some(path) = first {
                     self.load_selected(path);
                 }
-                self.notice = Some(("Retex vault opened in place.".into(), true));
+                self.notice = self
+                    .skipped_files_notice()
+                    .or(Some(("Retex vault opened in place.".into(), true)));
             }
             Err(error) => self.notice = Some((error.to_string(), false)),
         }
+    }
+
+    /// Files the open folder could not load, so a missing note is never unexplained.
+    fn skipped_files_notice(&self) -> Option<(String, bool)> {
+        let diagnostics = &self.active_vault()?.diagnostics;
+        let first = diagnostics.first()?;
+        let message = if diagnostics.len() == 1 {
+            format!("1 file was skipped: {first}")
+        } else {
+            format!("{} files were skipped. First: {first}", diagnostics.len())
+        };
+        Some((message, false))
     }
 
     fn document(&self, path: &Path) -> Option<&Document> {
@@ -696,9 +763,10 @@ impl SkribiApp {
             .unwrap_or_default();
     }
 
-    fn load_selected(&mut self, path: PathBuf) {
+    /// Returns false when the current note could not be saved, so the selection did not change.
+    fn load_selected(&mut self, path: PathBuf) -> bool {
         if self.dirty && self.save_current().is_err() {
-            return;
+            return false;
         }
         let document = self.document(&path).cloned();
         if let Some(document) = document {
@@ -721,6 +789,7 @@ impl SkribiApp {
             self.dirty = false;
             self.markdown_cache = CommonMarkCache::default();
         }
+        true
     }
     fn select_translation(&mut self, section: usize) {
         let section = section.min(self.reader_outline.sections.len().saturating_sub(1));
@@ -784,6 +853,17 @@ impl SkribiApp {
     }
 
     fn perform(&mut self, action: Action) {
+        let replaces_workspace = matches!(
+            action,
+            Action::OpenFolder
+                | Action::OpenRetexFolder
+                | Action::ImportPackage
+                | Action::ImportNotion
+                | Action::ImportFolder
+        );
+        if replaces_workspace && self.dirty && self.save_current().is_err() {
+            return;
+        }
         match action {
             Action::OpenFolder => {
                 if let Some(path) = rfd::FileDialog::new()
@@ -918,9 +998,13 @@ impl SkribiApp {
                     }
                 }
             }
-            Action::Select(path) => self.load_selected(path),
-            Action::OpenReader(path) => {
+            Action::Select(path) => {
                 self.load_selected(path);
+            }
+            Action::OpenReader(path) => {
+                if !self.load_selected(path) {
+                    return;
+                }
                 self.editing = false;
                 self.reader_open = true;
                 self.reader_sidebar_open = false;
@@ -963,7 +1047,9 @@ impl SkribiApp {
                                 self.dirty = false;
                                 self.load_selected(path);
                             }
-                            self.notice = Some(("Reloaded from disk.".into(), true));
+                            self.notice = self
+                                .skipped_files_notice()
+                                .or(Some(("Reloaded from disk.".into(), true)));
                         }
                         Err(error) => self.notice = Some((error.to_string(), false)),
                     }
@@ -989,14 +1075,7 @@ impl SkribiApp {
                     columns[0].horizontal(|ui| {
                         theme::brand_mark(ui, 26.0);
                         ui.label(RichText::new("Skribi").size(18.0).strong());
-                        if let Some((message, success)) = self.notice.as_ref() {
-                            ui.label(
-                                RichText::new(if *success { "Saved" } else { "Issue" })
-                                    .size(11.0)
-                                    .color(if *success { colors.green } else { colors.red }),
-                            )
-                            .on_hover_text(message);
-                        }
+                        notice_label(ui, self.notice.as_ref(), &colors);
                     });
 
                     columns[1].with_layout(
@@ -1032,9 +1111,12 @@ impl SkribiApp {
                                 action = Some(Action::ExportPackage);
                                 ui.close();
                             }
-                            if self.active_vault().is_some()
-                                && ui.button("Reload from disk").clicked()
-                            {
+                            let reload_label = if self.dirty {
+                                "Discard edits and reload"
+                            } else {
+                                "Reload from disk"
+                            };
+                            if self.active_vault().is_some() && ui.button(reload_label).clicked() {
                                 action = Some(Action::Reload);
                                 ui.close();
                             }
@@ -1137,9 +1219,13 @@ impl SkribiApp {
                         {
                             self.reader_sidebar_open = !self.reader_sidebar_open;
                         }
+                        let failure = self.notice.as_ref().filter(|(_, success)| !success);
+                        notice_label(ui, failure, &colors);
                     });
-                    columns[1].vertical_centered(|ui| {
-                        ui.label(RichText::new(title).size(13.0).strong());
+                    columns[1].centered_and_justified(|ui| {
+                        ui.add(
+                            egui::Label::new(RichText::new(title).size(13.0).strong()).truncate(),
+                        );
                     });
                     columns[2].with_layout(Layout::right_to_left(Align::Center), |ui| {
                         if self.editing && self.dirty && ui.button("Save").clicked() {
@@ -1189,8 +1275,13 @@ impl SkribiApp {
                                 }
                             });
                         }
+                        let was_editing = self.editing;
                         ui.selectable_value(&mut self.editing, true, "Edit");
                         ui.selectable_value(&mut self.editing, false, "Read");
+                        // Reading shows the saved text, so leaving the editor saves first.
+                        if was_editing && !self.editing && self.save_current().is_err() {
+                            self.editing = true;
+                        }
                     });
                 });
             });
@@ -1328,11 +1419,8 @@ impl SkribiApp {
                     });
                 });
                 ui.add_space(8.0);
-                ui.add(
-                    TextEdit::singleline(&mut self.search)
-                        .hint_text("Search vault")
-                        .desired_width(f32::INFINITY),
-                );
+                let focus = std::mem::take(&mut self.focus_search);
+                search_field(ui, &mut self.search, "Search vault", None, focus);
                 ui.add_space(8.0);
                 ScrollArea::vertical()
                     .id_salt(("retex-tree", std::process::id()))
@@ -1347,6 +1435,16 @@ impl SkribiApp {
                                 "",
                             );
                         } else {
+                            if filtered_documents(
+                                self.retex_vault.as_ref(),
+                                self.view,
+                                &self.search,
+                            )
+                            .next()
+                            .is_none()
+                            {
+                                ui.label(RichText::new("No matches").color(colors.secondary));
+                            }
                             for document in filtered_documents(
                                 self.retex_vault.as_ref(),
                                 self.view,
@@ -1425,7 +1523,10 @@ impl SkribiApp {
             ui.add_space(8.0);
             ui.label(RichText::new(subtitle).size(16.0).color(colors.secondary));
             ui.add_space(28.0);
-            if ui.button(button).clicked() {
+            let open = egui::Button::new(RichText::new(button).size(15.0).strong())
+                .fill(colors.ochre.gamma_multiply(0.30))
+                .min_size(Vec2::new(0.0, 34.0));
+            if ui.add(open).clicked() {
                 action = Some(open_action);
             }
             ui.add_space(12.0);
@@ -1456,11 +1557,8 @@ impl SkribiApp {
                 );
             });
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                ui.add(
-                    TextEdit::singleline(&mut self.search)
-                        .hint_text("Search library")
-                        .desired_width(260.0),
-                );
+                let focus = std::mem::take(&mut self.focus_search);
+                search_field(ui, &mut self.search, "Search library", Some(260.0), focus);
             });
         });
         ui.add_space(24.0);
@@ -1469,6 +1567,15 @@ impl SkribiApp {
             .id_salt(("library-shelf", std::process::id()))
             .auto_shrink([false, false])
             .show(ui, |ui| {
+                if books.is_empty() {
+                    let message = if books_count > 0 {
+                        "No books match your search."
+                    } else {
+                        "No books in this folder. A book is a Markdown file with an author in its front matter."
+                    };
+                    ui.label(RichText::new(message).size(14.0).color(colors.secondary));
+                    ui.add_space(26.0);
+                }
                 if !books.is_empty() {
                     ui.label(
                         RichText::new("YOUR BOOKS")
@@ -1481,7 +1588,11 @@ impl SkribiApp {
                     ui.horizontal_wrapped(|ui| {
                         for document in &books {
                             let response = ui
-                                .allocate_ui(Vec2::new(178.0, 250.0), |ui| {
+                                .allocate_ui_with_layout(
+                                    Vec2::new(178.0, 250.0),
+                                    Layout::top_down(Align::Min),
+                                    |ui| {
+                                    ui.spacing_mut().item_spacing.y = 8.0;
                                     egui::Frame::new()
                                         .fill(colors.raised)
                                         .stroke(egui::Stroke::new(1.0, colors.hairline))
@@ -1522,7 +1633,6 @@ impl SkribiApp {
                                                 );
                                             });
                                         });
-                                    ui.add_space(8.0);
                                     let author = document.metadata_value("author");
                                     if !author.is_empty() {
                                         ui.label(
@@ -1695,7 +1805,7 @@ impl SkribiApp {
                                     }
                                     ui.add(
                                         egui::Label::new(
-                                            RichText::new(&work.title)
+                                            RichText::new(compact_title(&work.title, 48))
                                                 .size(16.0)
                                                 .strong()
                                                 .color(egui::Color32::WHITE),
@@ -1748,8 +1858,13 @@ impl SkribiApp {
     }
 
     fn note_preview(&mut self, ui: &mut egui::Ui) -> Option<Action> {
-        let path = self.selected.clone()?;
         let colors = theme::palette(ui);
+        let Some(path) = self.selected.clone() else {
+            ui.centered_and_justified(|ui| {
+                ui.label(RichText::new("No notes in this vault yet.").color(colors.secondary));
+            });
+            return None;
+        };
         let relative_path = self
             .document(&path)
             .map(|document| document.relative_path.display().to_string())
@@ -2098,6 +2213,27 @@ impl eframe::App for SkribiApp {
         }
         let save_shortcut = ui.input(|input| input.modifiers.command && input.key_pressed(Key::S));
         let escape = ui.input(|input| input.key_pressed(Key::Escape));
+        let command_key =
+            |key: Key| ui.input(|input| input.modifiers.command && input.key_pressed(key));
+        let (open_key, find_key, new_key, edit_key) = (
+            command_key(Key::O),
+            command_key(Key::F),
+            command_key(Key::N),
+            command_key(Key::E),
+        );
+        if find_key && self.active_vault().is_some() {
+            if self.reader_open {
+                self.perform(Action::CloseReader);
+            }
+            self.focus_search = !self.reader_open;
+        }
+        if edit_key && self.reader_open {
+            if !self.editing {
+                self.editing = true;
+            } else if self.save_current().is_ok() {
+                self.editing = false;
+            }
+        }
         let mut action = if self.reader_open {
             self.reader_bar(ui)
         } else {
@@ -2111,6 +2247,13 @@ impl eframe::App for SkribiApp {
         action = action.or(list_action).or(central_action);
         if save_shortcut {
             action = Some(Action::Save);
+        } else if open_key {
+            action = Some(match self.view {
+                View::Library => Action::OpenFolder,
+                View::Notes => Action::OpenRetexFolder,
+            });
+        } else if new_key && self.view == View::Notes && self.retex_vault.is_some() {
+            action = Some(Action::NewNote);
         } else if escape {
             if self.reader_sidebar_open {
                 self.reader_sidebar_open = false;

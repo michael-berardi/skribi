@@ -202,3 +202,63 @@ fn headless_visual_matrix() {
     assert_visible(&welcome, "Open Retex vault");
     results.unwrap();
 }
+
+#[test]
+fn a_leading_heading_that_repeats_the_title_is_not_shown_twice() {
+    assert_eq!(
+        without_leading_title("# Reading Plan\n\nCompare.", "Reading Plan"),
+        "\nCompare."
+    );
+    assert_eq!(
+        without_leading_title("# Other\n\nBody", "Reading Plan"),
+        "# Other\n\nBody"
+    );
+    assert_eq!(without_leading_title("Body only", "Body only"), "Body only");
+}
+
+#[test]
+fn leaving_the_editor_saves_and_a_failed_save_keeps_the_selection() {
+    let root = std::env::temp_dir().join(format!("skribi-edit-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(&root).expect("temp vault");
+    std::fs::write(root.join("a.md"), "# Alpha\n\nfirst\n").expect("note a");
+    std::fs::write(root.join("b.md"), "# Beta\n\nsecond\n").expect("note b");
+    let mut app = harness(root.clone(), Theme::Light, View::Notes);
+    let (a, b) = {
+        let vault = app.state().retex_vault.as_ref().expect("vault");
+        let path = |title: &str| {
+            vault
+                .documents
+                .iter()
+                .find(|document| document.title == title)
+                .expect("note")
+                .path
+                .clone()
+        };
+        (path("Alpha"), path("Beta"))
+    };
+    assert!(app.state_mut().load_selected(a.clone()));
+    app.state_mut().reader_open = true;
+    app.state_mut().editing = true;
+    app.state_mut().editor_body = "changed in the editor\n".into();
+    app.state_mut().dirty = true;
+    app.run();
+    app.get_by_label("Read").click();
+    app.run();
+    assert!(!app.state().editing && !app.state().dirty);
+    assert!(
+        std::fs::read_to_string(&a)
+            .expect("saved note")
+            .contains("changed in the editor")
+    );
+
+    // The file changes on disk under an unsaved edit: the save is refused, so the note stays open.
+    app.state_mut().editor_body = "second edit\n".into();
+    app.state_mut().dirty = true;
+    std::fs::write(&a, "# Alpha\n\nchanged elsewhere\n").expect("external edit");
+    assert!(!app.state_mut().load_selected(b));
+    assert_eq!(app.state().selected.as_ref(), Some(&a));
+    app.run();
+    assert_visible_contains(&app, "changed on disk");
+    let _ = std::fs::remove_dir_all(&root);
+}
