@@ -15,7 +15,7 @@ files. Open an existing Markdown or Obsidian folder, or import a Notion export.
   <img src="tests/snapshots/reader_dark.png" alt="Skribi's continuous reader showing Book I of Marcus Aurelius's Meditations on a true-black background" width="820" />
 </p>
 
-Skribi is free and open-source software by [Pareto Cybernetics](https://paretocybernetics.com/software/).
+Skribi is free and open-source software by [Pareto Cybernetics](https://paretocybernetics.com/projects/skribi/).
 
 ## Install
 

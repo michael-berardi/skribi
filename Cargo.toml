@@ -7,7 +7,7 @@ rust-version = "1.95"
 description = "A calm, local-first reader and editor for Markdown libraries and Retex vaults"
 license = "MIT"
 repository = "https://github.com/michael-berardi/skribi"
-homepage = "https://paretocybernetics.com/software/"
+homepage = "https://paretocybernetics.com/projects/skribi/"
 keywords = ["markdown", "notes", "reader", "catalog", "retex"]
 categories = ["gui", "text-editors"]
 
