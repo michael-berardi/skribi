@@ -4,6 +4,7 @@ pub mod importer;
 pub mod mouseia;
 pub mod package;
 pub mod theme;
+pub mod updater;
 pub mod vault;
 
 use std::{fmt, io};

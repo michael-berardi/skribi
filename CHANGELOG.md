@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0
+
+- Skribi tells you when a newer release is out: a banner with the release notes, **Install Update**, **Remind Me Later**, **Skip This Version**, and an opt-in checkbox for automatic installs.
+- New Settings window (More → Settings…, or Cmd/Ctrl+,). Under Updates: automatic checks (on), automatic installs (off), Check Now, and the version.
+- The check is one anonymous request a day to GitHub's public release record. It stays off in CI, under coding agents, and with `SKRIBI_NO_UPDATE_CHECK=1`.
+- Updates are checked against `SHA256SUMS` before anything is replaced. On macOS the new app must also carry the same Developer ID Team ID and pass Gatekeeper. Skribi reopens only after the open note is saved, and keeps one `.previous` copy until the new version starts.
+
 ## 0.1.6
 
 - Leaving the editor saves your changes, so Read always shows what you wrote.

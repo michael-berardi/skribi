@@ -238,6 +238,59 @@ pub fn apply(context: &egui::Context) {
     }
 }
 
+/// A settings row: label on the left, a switch on the trailing edge. The whole row toggles,
+/// and every row's switch ends on the same trailing edge as buttons in the rows below it.
+pub fn toggle_row(ui: &mut egui::Ui, on: &mut bool, label: &str) -> egui::Response {
+    let palette = palette(ui);
+    let size = Vec2::new(ui.available_width(), ui.spacing().interact_size.y);
+    let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::click());
+    if response.clicked() {
+        *on = !*on;
+        response.mark_changed();
+    }
+    response.widget_info(|| {
+        egui::WidgetInfo::selected(egui::WidgetType::Checkbox, ui.is_enabled(), *on, label)
+    });
+    if ui.is_rect_visible(rect) {
+        let switch = egui::Rect::from_min_size(
+            egui::pos2(rect.right() - 34.0, rect.center().y - 10.0),
+            Vec2::new(34.0, 20.0),
+        );
+        let galley = egui::WidgetText::from(egui::RichText::new(label).size(14.0)).into_galley(
+            ui,
+            Some(egui::TextWrapMode::Truncate),
+            switch.left() - rect.left() - 12.0,
+            TextStyle::Body,
+        );
+        let text_top = rect.center().y - galley.size().y / 2.0;
+        ui.painter()
+            .galley(egui::pos2(rect.left(), text_top), galley, palette.ink);
+        let how_on = ui.ctx().animate_bool_responsive(response.id, *on);
+        let radius = switch.height() / 2.0;
+        let track = palette.hairline.lerp_to_gamma(palette.ochre, how_on);
+        let edge = palette.secondary.gamma_multiply(0.6 * (1.0 - how_on));
+        ui.painter().rect(
+            switch,
+            radius,
+            track,
+            Stroke::new(1.0, edge),
+            egui::StrokeKind::Inside,
+        );
+        let knob_color = if ui.visuals().dark_mode {
+            palette.ink
+        } else {
+            palette.raised
+        };
+        let knob = egui::lerp((switch.left() + radius)..=(switch.right() - radius), how_on);
+        ui.painter().circle_filled(
+            egui::pos2(knob, switch.center().y),
+            radius - 3.0,
+            knob_color,
+        );
+    }
+    response
+}
+
 pub fn card(ui: &egui::Ui) -> egui::Frame {
     let palette = palette(ui);
     egui::Frame::new()

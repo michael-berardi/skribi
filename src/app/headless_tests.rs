@@ -1,6 +1,10 @@
 use super::*;
+use crate::updater::Version;
 use eframe::egui::{Pos2, Rect, Theme, Vec2};
-use egui_kittest::{Harness, SnapshotResults, kittest::Queryable as _};
+use egui_kittest::{
+    Harness, SnapshotResults,
+    kittest::{NodeT as _, Queryable as _},
+};
 use std::path::PathBuf;
 
 const SCREEN_SIZE: Vec2 = Vec2::new(1280.0, 800.0);
@@ -61,6 +65,19 @@ fn assert_visible(harness: &Harness<'_, SkribiApp>, label: &str) {
     );
 }
 
+fn sample_update() -> ReleaseInfo {
+    let current = Version::parse(updater::CURRENT_VERSION).expect("stable current version");
+    ReleaseInfo {
+        version: Version {
+            major: current.major,
+            minor: current.minor + 1,
+            patch: 0,
+        },
+        notes: "- Notes stay local.\n- Updates verify SHA256SUMS and keep a rollback.\n".into(),
+        assets: Vec::new(),
+    }
+}
+
 fn assert_visible_contains(harness: &Harness<'_, SkribiApp>, label: &str) {
     let viewport = Rect::from_min_size(Pos2::ZERO, SCREEN_SIZE);
     let rect = harness.get_by_label_contains(label).rect();
@@ -103,6 +120,100 @@ fn vault_tree_preserves_hierarchy_and_compacts_unicode_titles() {
     let compact = compact_title("道德經超長文件名稱", 6);
     assert_eq!(compact.chars().count(), 6);
     assert!(compact.ends_with('…'));
+}
+
+fn toggled(harness: &Harness<'_, SkribiApp>, label: &str) -> bool {
+    harness.get_by_label(label).accesskit_node().toggled() == Some(egui::accesskit::Toggled::True)
+}
+
+/// Contract §7: banner text leading and actions trailing on one row, ending on the toolbar's
+/// trailing edge; Settings toggles one per row with Check Now on the version row, sharing the
+/// switches' trailing edge.
+#[test]
+fn update_ui_alignment_matrix() {
+    let mut results = SnapshotResults::new();
+    for (theme, suffix) in [(Theme::Light, "light"), (Theme::Dark, "dark")] {
+        let mut app = empty_harness(theme);
+        app.state_mut().update_state = UpdateState::Available(sample_update());
+        app.run();
+        assert_visible_contains(&app, "is available — you have");
+        let install = app.get_by_label("Install Update").rect();
+        let later = app.get_by_label("Remind Me Later").rect();
+        let skip = app.get_by_label("Skip This Version").rect();
+        let more = app.get_by_label("More").rect();
+        let heading = app.get_by_label_contains("is available — you have").rect();
+        assert!(
+            (install.right() - more.right()).abs() <= 1.0,
+            "{install:?} vs {more:?}"
+        );
+        assert!(skip.right() < later.left() && later.right() < install.left());
+        assert!((skip.center().y - install.center().y).abs() <= 1.0);
+        assert!(
+            heading.right() < skip.left(),
+            "text leads, actions trail on one row"
+        );
+        assert!(!toggled(
+            &app,
+            "Automatically download and install updates in the future"
+        ));
+        results.add(app.try_snapshot(format!("update_banner_{suffix}")));
+
+        app.state_mut().update_state = UpdateState::Idle;
+        app.state_mut().settings_open = true;
+        app.run();
+        assert_visible(&app, "Settings");
+        let check = app.get_by_label("Check for updates automatically").rect();
+        let auto = app.get_by_label("Install updates automatically").rect();
+        let now = app.get_by_label("Check Now").rect();
+        let version = app
+            .get_by_label(&format!("Version {}", updater::CURRENT_VERSION))
+            .rect();
+        assert!(
+            (check.right() - now.right()).abs() <= 1.0,
+            "{check:?} vs {now:?}"
+        );
+        assert!((auto.right() - now.right()).abs() <= 1.0);
+        assert!((version.left() - check.left()).abs() <= 1.0);
+        assert!(
+            (version.center().y - now.center().y).abs() <= 1.0,
+            "one version row"
+        );
+        assert!(check.bottom() <= auto.top() && auto.bottom() <= now.top());
+        assert!(toggled(&app, "Check for updates automatically"));
+        assert!(!toggled(&app, "Install updates automatically"));
+        results.add(app.try_snapshot(format!("update_settings_{suffix}")));
+    }
+    results.unwrap();
+}
+
+#[test]
+fn update_banner_choices_skip_remind_and_opt_in() {
+    let mut app = empty_harness(Theme::Light);
+    let release = sample_update();
+    let version = release.version.to_string();
+    app.state_mut().update_state = UpdateState::Available(release.clone());
+    app.run();
+    app.get_by_label("Automatically download and install updates in the future")
+        .click();
+    app.run();
+    assert!(app.state().updates.install_automatically);
+    app.get_by_label("Remind Me Later").click();
+    app.run();
+    assert_eq!(app.state().update_state, UpdateState::Idle);
+    assert_eq!(app.state().updates.skipped_version, None);
+
+    app.state_mut().update_state = UpdateState::Available(release);
+    app.run();
+    app.get_by_label("Skip This Version").click();
+    app.run();
+    assert_eq!(app.state().update_state, UpdateState::Idle);
+    assert!(app.state().updates.is_skipped(&version));
+
+    app.state_mut().settings_open = true;
+    app.run();
+    app.get_by_label("Install updates automatically").click();
+    app.run();
+    assert!(!app.state().updates.install_automatically);
 }
 
 #[test]

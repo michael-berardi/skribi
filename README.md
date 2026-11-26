@@ -25,14 +25,20 @@ Verify the download against the checksum before opening it.
 
 | System | Download |
 | --- | --- |
-| macOS 13+ (Apple Silicon and Intel) | [Skribi-0.1.6-macos-universal.dmg](https://github.com/michael-berardi/skribi/releases/download/v0.1.6/Skribi-0.1.6-macos-universal.dmg) |
-| Windows x86_64 | [Skribi-0.1.6-windows-x86_64.zip](https://github.com/michael-berardi/skribi/releases/download/v0.1.6/Skribi-0.1.6-windows-x86_64.zip) |
-| Linux x86_64 (glibc 2.30+) | [Skribi-0.1.6-linux-x86_64.tar.gz](https://github.com/michael-berardi/skribi/releases/download/v0.1.6/Skribi-0.1.6-linux-x86_64.tar.gz) |
+| macOS 13+ (Apple Silicon and Intel) | [Skribi-0.2.0-macos-universal.dmg](https://github.com/michael-berardi/skribi/releases/download/v0.2.0/Skribi-0.2.0-macos-universal.dmg) |
+| Windows x86_64 | [Skribi-0.2.0-windows-x86_64.zip](https://github.com/michael-berardi/skribi/releases/download/v0.2.0/Skribi-0.2.0-windows-x86_64.zip) |
+| Linux x86_64 (glibc 2.30+) | [Skribi-0.2.0-linux-x86_64.tar.gz](https://github.com/michael-berardi/skribi/releases/download/v0.2.0/Skribi-0.2.0-linux-x86_64.tar.gz) |
 
 On macOS, open the disk image and copy Skribi to Applications. On Windows,
 extract the archive and run `skribi.exe`. On Linux, extract the archive and run
 `./skribi` in a graphical desktop session. The macOS packaging
 script signs and notarizes the app and disk image.
+
+## Updates
+
+Skribi shows a banner when a newer release is out: **Install Update** verifies the
+download and reopens Skribi after saving your note. Automatic installs are off
+until you turn them on in **Settings → Updates**. See [docs/updates.md](docs/updates.md).
 
 ## First use
 
@@ -72,9 +78,10 @@ translations, with locally hidden recommendations.
 
 No account, analytics, advertising, document upload, or cloud sync. Opening a
 Library fetches the public catalog from [mouseia.org](https://mouseia.org/);
-adding a work fetches its text. External Markdown links may open a browser.
-Settings remember workspace paths and hidden recommendations; ZIP imports use
-temporary storage. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
+adding a work fetches its text. The update check is one anonymous request a day
+to GitHub's public release record. External Markdown links may open a browser.
+Settings remember workspace paths, hidden recommendations, and update choices.
+See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
 
 ## Build from source
 

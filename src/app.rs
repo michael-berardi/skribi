@@ -15,12 +15,35 @@ use crate::{
     importer::{self, ImportFormat},
     mouseia::{self, WorkSummary},
     package, theme,
+    updater::{self, CheckOutcome, InstallOutcome, ReleaseInfo, UpdateCache, UpdatePreferences},
     vault::Vault,
 };
 
 const LIBRARY_KEY: &str = "skribi.library";
 const RETEX_KEY: &str = "skribi.retex";
 const MOUSEIA_DISMISSED_KEY: &str = "skribi.mouseia.dismissed";
+
+#[derive(Debug)]
+enum UpdateMessage {
+    Checked {
+        result: std::result::Result<CheckOutcome, String>,
+        manual: bool,
+    },
+    Installed(std::result::Result<InstallOutcome, String>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum UpdateState {
+    Idle,
+    Checking,
+    Available(ReleaseInfo),
+    Installing {
+        release: ReleaseInfo,
+        automatic: bool,
+    },
+    /// The new version is on disk and starts with the next launch.
+    Installed(String),
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 enum View {
@@ -45,6 +68,7 @@ enum Action {
     Reload,
     DownloadMouseia(String),
     CloseActiveWorkspace,
+    OpenSettings,
 }
 #[derive(Debug)]
 enum MouseiaMessage {
@@ -471,10 +495,24 @@ pub struct SkribiApp {
     markdown_cache: CommonMarkCache,
     mouseia: MouseiaLibrary,
     notice: Option<(String, bool)>,
+    updates: UpdatePreferences,
+    update_state: UpdateState,
+    update_cache: UpdateCache,
+    update_sender: Sender<UpdateMessage>,
+    update_receiver: Receiver<UpdateMessage>,
+    /// False in CI, under coding agents, with the opt-out variable, and in tests.
+    automatic_checks: bool,
+    auto_install_due: bool,
+    relaunch: Option<PathBuf>,
+    settings_open: bool,
 }
 
 impl SkribiApp {
     pub fn new(context: &eframe::CreationContext<'_>) -> Self {
+        // This version has started, so the previous one is no longer needed for rollback.
+        if let Ok(exe) = std::env::current_exe() {
+            std::thread::spawn(move || updater::cleanup_install_debris(&exe));
+        }
         context.egui_ctx.set_theme(egui::ThemePreference::System);
         theme::apply(&context.egui_ctx);
         let preferred = std::env::args_os()
@@ -511,6 +549,11 @@ impl SkribiApp {
         {
             app.mouseia.dismissed = dismissed;
         }
+        if let Some(storage) = context.storage {
+            app.updates = UpdatePreferences::load(storage);
+        }
+        app.update_cache = updater::load_cache();
+        app.automatic_checks = updater::automatic_checks_allowed(|name| std::env::var(name).ok());
         if let Some(path) = preferred {
             app.open_folder(path);
         }
@@ -533,6 +576,7 @@ impl SkribiApp {
     }
 
     fn empty() -> Self {
+        let (update_sender, update_receiver) = mpsc::channel();
         Self {
             vault: None,
             retex_vault: None,
@@ -561,6 +605,15 @@ impl SkribiApp {
             markdown_cache: CommonMarkCache::default(),
             mouseia: MouseiaLibrary::default(),
             notice: None,
+            updates: UpdatePreferences::default(),
+            update_state: UpdateState::Idle,
+            update_cache: UpdateCache::default(),
+            update_sender,
+            update_receiver,
+            automatic_checks: false,
+            auto_install_due: false,
+            relaunch: None,
+            settings_open: false,
         }
     }
 
@@ -755,6 +808,326 @@ impl SkribiApp {
             }
         }
     }
+    fn start_update_check(&mut self, manual: bool) {
+        match &self.update_state {
+            UpdateState::Checking | UpdateState::Installing { .. } => return,
+            UpdateState::Installed(version) => {
+                if manual {
+                    self.notice = Some((
+                        format!("Skribi {version} is installed. Reopen Skribi to use it."),
+                        true,
+                    ));
+                }
+                return;
+            }
+            UpdateState::Idle | UpdateState::Available(_) => {}
+        }
+        self.update_state = UpdateState::Checking;
+        let url = updater::check_url();
+        let sender = self.update_sender.clone();
+        std::thread::spawn(move || {
+            let result = updater::fetch_latest(&url);
+            let _ = sender.send(UpdateMessage::Checked { result, manual });
+        });
+    }
+
+    fn background_job_running(&self) -> bool {
+        self.mouseia.loading_catalog || self.mouseia.downloading.is_some()
+    }
+
+    /// Save the open note; true when nothing unsaved is left.
+    fn save_before_update(&mut self) -> bool {
+        let _ = self.save_current();
+        !self.dirty
+    }
+
+    fn start_update_install(&mut self, release: ReleaseInfo, automatic: bool) {
+        if automatic {
+            // Never interrupt work: wait until nothing is unsaved or running.
+            if self.dirty || self.background_job_running() {
+                self.auto_install_due = true;
+                return;
+            }
+            updater::log(&format!("installing {}", release.version));
+        } else if !self.save_before_update() {
+            if !matches!(self.notice, Some((_, false))) {
+                self.notice = Some(("Save the open note, then install the update.".into(), false));
+            }
+            return;
+        } else if self.background_job_running() {
+            self.notice = Some((
+                "Wait for the download to finish, then install the update.".into(),
+                false,
+            ));
+            return;
+        }
+        self.auto_install_due = false;
+        self.update_state = UpdateState::Installing {
+            release: release.clone(),
+            automatic,
+        };
+        let sender = self.update_sender.clone();
+        std::thread::spawn(move || {
+            let _ = sender.send(UpdateMessage::Installed(updater::install_release(&release)));
+        });
+    }
+
+    fn poll_updates(&mut self, ctx: &egui::Context) {
+        // At most one background check a day, also in sessions left open for days.
+        if self.automatic_checks
+            && self.updates.check_automatically
+            && self.update_state == UpdateState::Idle
+            && self.update_cache.due(updater::now_unix())
+        {
+            self.start_update_check(false);
+        }
+        while let Ok(message) = self.update_receiver.try_recv() {
+            match message {
+                UpdateMessage::Checked { result, manual } => {
+                    self.finish_update_check(result, manual);
+                }
+                UpdateMessage::Installed(result) => self.finish_update_install(result),
+            }
+        }
+        if self.auto_install_due
+            && let UpdateState::Available(release) = &self.update_state
+        {
+            let release = release.clone();
+            self.start_update_install(release, true);
+        }
+        if matches!(
+            self.update_state,
+            UpdateState::Checking | UpdateState::Installing { .. }
+        ) {
+            ctx.request_repaint_after(std::time::Duration::from_millis(150));
+        }
+    }
+
+    fn finish_update_check(
+        &mut self,
+        result: std::result::Result<CheckOutcome, String>,
+        manual: bool,
+    ) {
+        let now = updater::now_unix();
+        self.update_cache.record_outcome(&result, now);
+        self.update_state = UpdateState::Idle;
+        match result {
+            Ok(CheckOutcome::Current) if manual => {
+                self.notice = Some((
+                    format!("Skribi {} is up to date.", updater::CURRENT_VERSION),
+                    true,
+                ));
+            }
+            Ok(CheckOutcome::Available(release)) => {
+                let version = release.version.to_string();
+                // Check Now shows what it finds; automatic checks respect Skip and the daily limit.
+                if manual
+                    || (!self.updates.is_skipped(&version)
+                        && self.update_cache.should_show(&version, now))
+                {
+                    self.update_cache.mark_shown(&version, now);
+                    self.update_state = UpdateState::Available(release.clone());
+                    if !manual && self.updates.install_automatically {
+                        self.start_update_install(release, true);
+                    }
+                }
+            }
+            Err(cause) if manual => {
+                self.notice = Some((format!("Update check failed: {cause}"), false));
+            }
+            _ => {}
+        }
+        let _ = updater::save_cache(&self.update_cache);
+    }
+
+    fn finish_update_install(&mut self, result: std::result::Result<InstallOutcome, String>) {
+        let UpdateState::Installing { release, automatic } =
+            std::mem::replace(&mut self.update_state, UpdateState::Idle)
+        else {
+            return;
+        };
+        match result {
+            Ok(InstallOutcome::Installed { version, path }) => {
+                if automatic {
+                    updater::log(&format!("installed {version}; it starts next launch"));
+                    self.notice = Some((
+                        format!("Skribi {version} is installed and starts next time."),
+                        true,
+                    ));
+                } else {
+                    self.notice =
+                        Some((format!("Skribi {version} is installed. Reopening…"), true));
+                    self.relaunch = Some(path);
+                }
+                self.update_state = UpdateState::Installed(version);
+            }
+            Ok(InstallOutcome::Manual { reason }) => {
+                if automatic {
+                    updater::log(&format!("manual update needed: {reason}"));
+                } else {
+                    self.notice = Some((reason, false));
+                    let _ = updater::open_release_page();
+                }
+                self.update_state = UpdateState::Available(release);
+            }
+            Err(cause) => {
+                if automatic {
+                    updater::log(&format!("install failed: {cause}"));
+                }
+                self.notice = Some((
+                    format!(
+                        "Update failed: {cause} Skribi {} is unchanged.",
+                        updater::CURRENT_VERSION
+                    ),
+                    false,
+                ));
+                self.update_state = UpdateState::Available(release);
+            }
+        }
+    }
+
+    /// Relaunch into the installed version only once the open note is saved and no job runs.
+    fn relaunch_if_ready(&mut self, ctx: &egui::Context) {
+        if self.relaunch.is_none() || self.background_job_running() {
+            return;
+        }
+        let installed = self.relaunch.take().unwrap_or_default();
+        if self.save_before_update() && updater::relaunch_after_exit(&installed).is_ok() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        } else {
+            self.notice = Some((
+                "The update is installed. Save your note, then reopen Skribi.".into(),
+                false,
+            ));
+        }
+    }
+
+    fn update_banner(&mut self, ui: &mut egui::Ui) {
+        let UpdateState::Available(release) = &self.update_state else {
+            return;
+        };
+        let version = release.version.to_string();
+        let notes = release.notes.clone();
+        let release = release.clone();
+        let colors = theme::palette(ui);
+        let mut automatic = self.updates.install_automatically;
+        let (mut install, mut later, mut skip) = (false, false, false);
+        egui::Panel::top("update-banner")
+            .exact_size(96.0)
+            .frame(
+                egui::Frame::new()
+                    .fill(colors.sidebar)
+                    .inner_margin(egui::Margin::symmetric(14, 8))
+                    .stroke(egui::Stroke::new(1.0, colors.hairline)),
+            )
+            .show(ui, |ui| {
+                ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                    let primary = egui::Button::new(RichText::new("Install Update").strong())
+                        .fill(colors.ochre.gamma_multiply(0.30));
+                    install = ui.add(primary).clicked();
+                    later = ui.button("Remind Me Later").clicked();
+                    skip = ui.button("Skip This Version").clicked();
+                    ui.add_space(24.0);
+                    ui.with_layout(Layout::top_down(Align::Min), |ui| {
+                        ui.spacing_mut().item_spacing.y = 4.0;
+                        ui.spacing_mut().interact_size.y = 18.0;
+                        ui.visuals_mut().widgets.inactive.bg_stroke =
+                            egui::Stroke::new(1.0, colors.secondary);
+                        ui.label(
+                            RichText::new(format!(
+                                "Skribi {version} is available — you have {}.",
+                                updater::CURRENT_VERSION
+                            ))
+                            .size(15.0)
+                            .strong(),
+                        );
+                        ScrollArea::vertical()
+                            .id_salt("update-notes")
+                            .max_height(36.0)
+                            .auto_shrink([false, true])
+                            .show(ui, |ui| {
+                                let style = ui.style_mut();
+                                style
+                                    .text_styles
+                                    .insert(TextStyle::Body, FontId::proportional(12.5));
+                                style.spacing.item_spacing.y = 1.0;
+                                style.visuals.override_text_color = Some(colors.secondary);
+                                CommonMarkViewer::new().show(ui, &mut self.markdown_cache, &notes);
+                            });
+                        ui.checkbox(
+                            &mut automatic,
+                            RichText::new(
+                                "Automatically download and install updates in the future",
+                            )
+                            .size(12.5),
+                        );
+                    });
+                });
+            });
+        self.updates.install_automatically = automatic;
+        if install {
+            self.start_update_install(release, false);
+        } else if later || skip {
+            if skip {
+                self.updates.skipped_version = Some(version);
+            }
+            self.auto_install_due = false;
+            self.update_state = UpdateState::Idle;
+        }
+    }
+
+    fn settings_window(&mut self, ctx: &egui::Context) {
+        if !self.settings_open {
+            return;
+        }
+        let colors = theme::palette_for(ctx.theme() == egui::Theme::Dark);
+        let checking = self.update_state == UpdateState::Checking;
+        let (mut check, mut install) = (
+            self.updates.check_automatically,
+            self.updates.install_automatically,
+        );
+        let mut check_now = false;
+        egui::Window::new(RichText::new("Settings").size(15.0).strong())
+            .open(&mut self.settings_open)
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .show(ctx, |ui| {
+                ui.set_width(340.0);
+                ui.spacing_mut().item_spacing.y = 2.0;
+                ui.label(
+                    RichText::new("Updates")
+                        .size(12.0)
+                        .strong()
+                        .color(colors.secondary),
+                );
+                theme::toggle_row(ui, &mut check, "Check for updates automatically");
+                theme::toggle_row(ui, &mut install, "Install updates automatically");
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new(format!("Version {}", updater::CURRENT_VERSION))
+                            .size(14.0)
+                            .color(colors.secondary),
+                    );
+                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                        let label = if checking { "Checking…" } else { "Check Now" };
+                        let button = egui::Button::new(RichText::new(label).size(14.0));
+                        check_now = ui.add_enabled(!checking, button).clicked();
+                    });
+                });
+            });
+        if self.updates.check_automatically && !check {
+            // Opting out leaves no update files behind.
+            updater::clear_cache_files();
+            self.update_cache = UpdateCache::default();
+        }
+        self.updates.check_automatically = check;
+        self.updates.install_automatically = install;
+        if check_now {
+            self.start_update_check(true);
+        }
+    }
+
     fn refresh_retex_tree(&mut self) {
         self.retex_tree = self
             .retex_vault
@@ -1038,6 +1411,7 @@ impl SkribiApp {
                 self.dirty = false;
             }
             Action::DownloadMouseia(slug) => self.mouseia.download(slug),
+            Action::OpenSettings => self.settings_open = true,
             Action::Reload => {
                 if let Some(vault) = self.active_vault_mut() {
                     match vault.reload() {
@@ -1102,6 +1476,10 @@ impl SkribiApp {
                             };
                             if ui.button(open_label).clicked() {
                                 action = Some(open_action);
+                                ui.close();
+                            }
+                            if ui.button("Settings…").clicked() {
+                                action = Some(Action::OpenSettings);
                                 ui.close();
                             }
                             if self.view == View::Library
@@ -2206,7 +2584,9 @@ mod headless_tests;
 
 impl eframe::App for SkribiApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        self.poll_updates(ui.ctx());
         self.poll_mouseia();
+        self.relaunch_if_ready(ui.ctx());
         if self.mouseia.loading_catalog || self.mouseia.downloading.is_some() {
             ui.ctx()
                 .request_repaint_after(std::time::Duration::from_millis(80));
@@ -2215,11 +2595,12 @@ impl eframe::App for SkribiApp {
         let escape = ui.input(|input| input.key_pressed(Key::Escape));
         let command_key =
             |key: Key| ui.input(|input| input.modifiers.command && input.key_pressed(key));
-        let (open_key, find_key, new_key, edit_key) = (
+        let (open_key, find_key, new_key, edit_key, settings_key) = (
             command_key(Key::O),
             command_key(Key::F),
             command_key(Key::N),
             command_key(Key::E),
+            command_key(Key::Comma),
         );
         if find_key && self.active_vault().is_some() {
             if self.reader_open {
@@ -2239,6 +2620,7 @@ impl eframe::App for SkribiApp {
         } else {
             self.collection_bar(ui)
         };
+        self.update_banner(ui);
         if self.reader_open {
             self.reader_sidebar(ui);
         }
@@ -2247,6 +2629,8 @@ impl eframe::App for SkribiApp {
         action = action.or(list_action).or(central_action);
         if save_shortcut {
             action = Some(Action::Save);
+        } else if settings_key {
+            action = Some(Action::OpenSettings);
         } else if open_key {
             action = Some(match self.view {
                 View::Library => Action::OpenFolder,
@@ -2255,7 +2639,9 @@ impl eframe::App for SkribiApp {
         } else if new_key && self.view == View::Notes && self.retex_vault.is_some() {
             action = Some(Action::NewNote);
         } else if escape {
-            if self.reader_sidebar_open {
+            if self.settings_open {
+                self.settings_open = false;
+            } else if self.reader_sidebar_open {
                 self.reader_sidebar_open = false;
             } else if self.reader_open {
                 action = Some(Action::CloseReader);
@@ -2264,6 +2650,7 @@ impl eframe::App for SkribiApp {
         if let Some(action) = action {
             self.perform(action);
         }
+        self.settings_window(ui.ctx());
     }
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
@@ -2283,5 +2670,6 @@ impl eframe::App for SkribiApp {
         if let Ok(dismissed) = serde_json::to_string(&self.mouseia.dismissed) {
             storage.set_string(MOUSEIA_DISMISSED_KEY, dismissed);
         }
+        self.updates.store(storage);
     }
 }
