@@ -1,11 +1,6 @@
 # Skribi
 
-<p align="center">
-  <a href="https://github.com/michael-berardi/skribi/releases/latest"><img src="https://img.shields.io/github/v/release/michael-berardi/skribi?label=release" alt="Latest release" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/michael-berardi/skribi" alt="MIT License" /></a>
-  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="macOS, Windows and Linux" />
-  <img src="https://img.shields.io/badge/built%20with-Rust-orange" alt="Built with Rust" />
-</p>
+Rust · macOS, Windows and Linux · MIT licensed
 
 Skribi is a desktop reader and editor for Markdown libraries and Retex vaults.
 Read long works in a continuous, chapter-aware view while keeping notes as plain
@@ -76,12 +71,12 @@ translations, with locally hidden recommendations.
 
 ## Privacy
 
-No account, analytics, advertising, document upload, or cloud sync. Opening a
-Library fetches the public catalog from [mouseia.org](https://mouseia.org/);
-adding a work fetches its text. The update check is one anonymous request a day
-to GitHub's public release record. External Markdown links may open a browser.
-Settings remember workspace paths, hidden recommendations, and update choices.
-See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
+No telemetry, analytics, account, document upload, or cloud sync. Skribi makes
+one anonymous update check a day to GitHub (off in **Settings → Updates** or with
+`SKRIBI_NO_UPDATE_CHECK=1`) and contacts [mouseia.org](https://mouseia.org/) only
+when you choose **Browse Mouseia catalog** or **Add**. It stores workspace paths
+and settings in app data and edit history in `.retex/`, owner-only on Unix.
+What is stored and how to delete it: [PRIVACY.md](PRIVACY.md) · [SECURITY.md](SECURITY.md).
 
 ## Build from source
 

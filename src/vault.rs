@@ -192,6 +192,7 @@ impl Vault {
             &path,
             "---\ntitle: Untitled\nstatus: Inbox\ntype: note\n---\n\n",
         )?;
+        crate::restrict_to_owner(&path, false)?;
         let document = Document::load(&path, &self.root)?;
         self.documents.insert(0, document.clone());
         Ok(document)
@@ -271,6 +272,7 @@ where
 {
     let history_dir = root.join(".retex");
     fs::create_dir_all(&history_dir)?;
+    crate::restrict_to_owner(&history_dir, true)?;
     let journal = history_dir.join("history.jsonl");
     with_journal_lock(&journal, || {
         let current = fs::read_to_string(path)?;
@@ -317,7 +319,8 @@ fn write_history(path: &Path, entries: &[HistoryEntry]) -> Result<()> {
         source.push_str(&serde_json::to_string(entry)?);
         source.push('\n');
     }
-    atomic_write(path, &source)
+    atomic_write(path, &source)?;
+    crate::restrict_to_owner(path, false)
 }
 
 fn trim_history(entries: &mut Vec<HistoryEntry>, path: &Path) {
@@ -338,7 +341,7 @@ fn atomic_write(path: &Path, contents: &str) -> Result<()> {
     let mut file = AtomicWriteFile::options().open(path)?;
     file.write_all(contents.as_bytes())?;
     file.commit()?;
-    Ok(())
+    crate::restrict_to_owner(path, false)
 }
 
 fn cocoa_timestamp() -> f64 {
@@ -356,7 +359,8 @@ fn with_journal_lock<T>(journal: &Path, operation: impl FnOnce() -> Result<T>) -
         .truncate(false)
         .read(true)
         .write(true)
-        .open(lock_path)?;
+        .open(&lock_path)?;
+    crate::restrict_to_owner(&lock_path, false)?;
     lock.lock_exclusive()?;
     let result = operation();
     let unlock_result = lock.unlock();
@@ -427,6 +431,35 @@ mod tests {
         let history = fs::read_to_string(root.join(".retex/history.jsonl")).unwrap();
         assert!(history.contains("previousSource"));
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn retex_history_and_notes_are_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let root = std::env::temp_dir().join(format!(
+            "skribi-private-vault-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        ));
+        fs::create_dir_all(&root).unwrap();
+        fs::write(root.join("note.md"), "---\ntitle: Note\n---\nOld").unwrap();
+        let mut vault = Vault::open(root.clone()).unwrap();
+        let note = vault.documents[0].clone();
+        vault
+            .save_document(&note.path, &note.fingerprint, "Renamed", "Inbox", "New")
+            .unwrap();
+        let mode =
+            |path: &std::path::Path| fs::metadata(path).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode(&root.join(".retex")), 0o700);
+        assert_eq!(mode(&root.join(".retex/history.jsonl")), 0o600);
+        assert_eq!(mode(&root.join(".retex/history.jsonl.lock")), 0o600);
+        assert_eq!(mode(&note.path), 0o600);
+        fs::remove_dir_all(&root).unwrap();
     }
 
     #[test]

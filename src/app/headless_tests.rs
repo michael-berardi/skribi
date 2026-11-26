@@ -220,6 +220,8 @@ fn update_banner_choices_skip_remind_and_opt_in() {
 fn headless_visual_matrix() {
     let mut results = SnapshotResults::new();
     let mut app = harness(book_fixture(), Theme::Light, View::Library);
+    // The visual fixture shows a browsed catalog; the app never fetches it on its own.
+    app.state_mut().mouseia.catalog_enabled = true;
     app.state_mut().mouseia.works = ["greek", "chinese", "american"]
         .into_iter()
         .enumerate()
@@ -312,6 +314,20 @@ fn headless_visual_matrix() {
     welcome.run();
     assert_visible(&welcome, "Open Retex vault");
     results.unwrap();
+}
+
+#[test]
+fn opening_a_library_does_not_fetch_the_mouseia_catalog() {
+    let mut app = SkribiApp::empty();
+    app.open_folder(book_fixture());
+    assert!(!app.mouseia.catalog_enabled);
+    assert!(!app.mouseia.loading_catalog);
+    assert!(app.mouseia.works.is_empty());
+    // Loading remains a no-op until the user explicitly browses the catalog.
+    app.mouseia.load_catalog();
+    assert!(!app.mouseia.loading_catalog);
+    app.mouseia.enable_catalog();
+    assert!(app.mouseia.catalog_enabled);
 }
 
 #[test]

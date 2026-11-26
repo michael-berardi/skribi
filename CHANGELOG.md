@@ -6,6 +6,9 @@
 - New Settings window (More → Settings…, or Cmd/Ctrl+,). Under Updates: automatic checks (on), automatic installs (off), Check Now, and the version.
 - The check is one anonymous request a day to GitHub's public release record. It stays off in CI, under coding agents, and with `SKRIBI_NO_UPDATE_CHECK=1`.
 - Updates are checked against `SHA256SUMS` before anything is replaced. On macOS the new app must also carry the same Developer ID Team ID and pass Gatekeeper. Skribi reopens only after the open note is saved, and keeps one `.previous` copy until the new version starts.
+- The Mouseia catalog no longer loads when a library opens. Choose **Browse Mouseia catalog** to fetch it; adding a work still requires a click.
+- Files Skribi writes (Retex history and notes, imports, exported packages, Mouseia text, and app settings) use owner-only permissions on Unix; the app-data folder is tightened on startup and save.
+- PRIVACY.md now lists what reaches the network (the update check and the opt-in catalog), what is stored locally, and how to delete it.
 
 ## 0.1.6
 
