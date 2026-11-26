@@ -4,6 +4,7 @@ use std::{
     sync::mpsc::{self, Receiver, Sender},
 };
 
+use eframe::Storage as _;
 use eframe::egui::{
     self, Align, FontId, Key, Layout, RichText, ScrollArea, Sense, TextEdit, TextStyle, Vec2,
 };
@@ -21,6 +22,30 @@ use crate::{
 const LIBRARY_KEY: &str = "skribi.library";
 const RETEX_KEY: &str = "skribi.retex";
 const MOUSEIA_DISMISSED_KEY: &str = "skribi.mouseia.dismissed";
+
+/// Delegates persistence writes, then makes the app-data folder owner-only.
+struct PrivateStorage<'a> {
+    inner: &'a mut dyn eframe::Storage,
+}
+
+impl eframe::Storage for PrivateStorage<'_> {
+    fn get_string(&self, key: &str) -> Option<String> {
+        self.inner.get_string(key)
+    }
+
+    fn set_string(&mut self, key: &str, value: String) {
+        self.inner.set_string(key, value);
+    }
+
+    fn remove_string(&mut self, key: &str) {
+        self.inner.remove_string(key);
+    }
+
+    fn flush(&mut self) {
+        self.inner.flush();
+        crate::restrict_app_storage();
+    }
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
 enum View {
@@ -56,6 +81,7 @@ enum MouseiaMessage {
 struct MouseiaLibrary {
     works: Vec<WorkSummary>,
     error: Option<String>,
+    catalog_enabled: bool,
     loading_catalog: bool,
     downloading: Option<String>,
     dismissed: BTreeSet<String>,
@@ -69,6 +95,8 @@ impl Default for MouseiaLibrary {
         Self {
             works: Vec::new(),
             error: None,
+            // The catalog is opt-in for every launch; opening a library never fetches it.
+            catalog_enabled: false,
             loading_catalog: false,
             downloading: None,
             dismissed: BTreeSet::new(),
@@ -79,8 +107,12 @@ impl Default for MouseiaLibrary {
 }
 
 impl MouseiaLibrary {
+    fn enable_catalog(&mut self) {
+        self.catalog_enabled = true;
+    }
+
     fn load_catalog(&mut self) {
-        if self.loading_catalog || !self.works.is_empty() {
+        if !self.catalog_enabled || self.loading_catalog || !self.works.is_empty() {
             return;
         }
         self.loading_catalog = true;
@@ -476,6 +508,7 @@ pub struct SkribiApp {
 impl SkribiApp {
     pub fn new(context: &eframe::CreationContext<'_>) -> Self {
         context.egui_ctx.set_theme(egui::ThemePreference::System);
+        crate::restrict_app_storage();
         theme::apply(&context.egui_ctx);
         let preferred = std::env::args_os()
             .nth(1)
@@ -620,8 +653,6 @@ impl SkribiApp {
                         true,
                     ))
                 });
-                #[cfg(not(test))]
-                self.mouseia.load_catalog();
             }
             Err(error) => self.notice = Some((error.to_string(), false)),
         }
@@ -1669,6 +1700,21 @@ impl SkribiApp {
         });
         ui.add_space(10.0);
 
+        if !self.mouseia.catalog_enabled {
+            ui.label(
+                RichText::new(
+                    "Browse the public Mouseia catalog to add works here. This fetches the catalog from mouseia.org.",
+                )
+                .size(13.0)
+                .color(colors.secondary),
+            );
+            if ui.button("Browse Mouseia catalog").clicked() {
+                self.mouseia.enable_catalog();
+                self.mouseia.load_catalog();
+            }
+            return None;
+        }
+
         if self.mouseia.loading_catalog {
             ui.spinner();
             return None;
@@ -2268,6 +2314,7 @@ impl eframe::App for SkribiApp {
 
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         let _ = self.save_current();
+        let mut storage = PrivateStorage { inner: storage };
         storage.set_string(
             LIBRARY_KEY,
             self.vault
@@ -2283,5 +2330,6 @@ impl eframe::App for SkribiApp {
         if let Ok(dismissed) = serde_json::to_string(&self.mouseia.dismissed) {
             storage.set_string(MOUSEIA_DISMISSED_KEY, dismissed);
         }
+        storage.flush();
     }
 }

@@ -176,6 +176,7 @@ fn extract_zip(source: &Path, destination: &Path) -> Result<PathBuf> {
             output.commit()?;
         }
     }
+    crate::restrict_tree(destination)?;
     Ok(destination.to_owned())
 }
 
@@ -469,14 +470,14 @@ fn atomic_copy(source: &Path, destination: &Path) -> Result<()> {
     let mut output = AtomicWriteFile::options().open(destination)?;
     std::io::copy(&mut input, &mut output)?;
     output.commit()?;
-    Ok(())
+    crate::restrict_to_owner(destination, false)
 }
 
 fn atomic_write(path: &Path, contents: &[u8]) -> Result<()> {
     let mut output = AtomicWriteFile::options().open(path)?;
     output.write_all(contents)?;
     output.commit()?;
-    Ok(())
+    crate::restrict_to_owner(path, false)
 }
 
 #[cfg(test)]

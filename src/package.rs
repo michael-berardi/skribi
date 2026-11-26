@@ -92,6 +92,7 @@ pub fn export_library(
     }
     let atomic = archive.finish()?;
     atomic.commit()?;
+    crate::restrict_to_owner(output, false)?;
     Ok(manifest)
 }
 
@@ -109,6 +110,7 @@ pub fn import_library(package: &Path, destination: &Path) -> Result<LibraryManif
     }
 
     fs::create_dir_all(destination)?;
+    crate::restrict_to_owner(destination, true)?;
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index)?;
         let Some(enclosed) = entry.enclosed_name() else {
@@ -134,6 +136,7 @@ pub fn import_library(package: &Path, destination: &Path) -> Result<LibraryManif
         let mut output = AtomicWriteFile::options().open(&target)?;
         std::io::copy(&mut entry, &mut output)?;
         output.commit()?;
+        crate::restrict_to_owner(&target, false)?;
     }
     Ok(manifest)
 }

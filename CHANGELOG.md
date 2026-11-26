@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+
+- The Mouseia catalog no longer loads when a library opens. Choose **Browse Mouseia catalog** to fetch it; adding a work still requires a click.
+- Files Skribi writes (Retex history and notes, imports, exported packages, Mouseia text, and app settings) use owner-only permissions on Unix; the app-data folder is tightened on startup and save.
+- Privacy documentation now describes the opt-in catalog, local storage, and deletion steps.
+
 ## 0.1.6
 
 - Leaving the editor saves your changes, so Read always shows what you wrote.

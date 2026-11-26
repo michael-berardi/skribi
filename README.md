@@ -1,11 +1,6 @@
 # Skribi
 
-<p align="center">
-  <a href="https://github.com/michael-berardi/skribi/releases/latest"><img src="https://img.shields.io/github/v/release/michael-berardi/skribi?label=release" alt="Latest release" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/michael-berardi/skribi" alt="MIT License" /></a>
-  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey" alt="macOS, Windows and Linux" />
-  <img src="https://img.shields.io/badge/built%20with-Rust-orange" alt="Built with Rust" />
-</p>
+Rust · macOS, Windows and Linux · MIT licensed
 
 Skribi is a desktop reader and editor for Markdown libraries and Retex vaults.
 Read long works in a continuous, chapter-aware view while keeping notes as plain
@@ -25,9 +20,9 @@ Verify the download against the checksum before opening it.
 
 | System | Download |
 | --- | --- |
-| macOS 13+ (Apple Silicon and Intel) | [Skribi-0.1.6-macos-universal.dmg](https://github.com/michael-berardi/skribi/releases/download/v0.1.6/Skribi-0.1.6-macos-universal.dmg) |
-| Windows x86_64 | [Skribi-0.1.6-windows-x86_64.zip](https://github.com/michael-berardi/skribi/releases/download/v0.1.6/Skribi-0.1.6-windows-x86_64.zip) |
-| Linux x86_64 (glibc 2.30+) | [Skribi-0.1.6-linux-x86_64.tar.gz](https://github.com/michael-berardi/skribi/releases/download/v0.1.6/Skribi-0.1.6-linux-x86_64.tar.gz) |
+| macOS 13+ (Apple Silicon and Intel) | [Skribi-0.2.0-macos-universal.dmg](https://github.com/michael-berardi/skribi/releases/download/v0.2.0/Skribi-0.2.0-macos-universal.dmg) |
+| Windows x86_64 | [Skribi-0.2.0-windows-x86_64.zip](https://github.com/michael-berardi/skribi/releases/download/v0.2.0/Skribi-0.2.0-windows-x86_64.zip) |
+| Linux x86_64 (glibc 2.30+) | [Skribi-0.2.0-linux-x86_64.tar.gz](https://github.com/michael-berardi/skribi/releases/download/v0.2.0/Skribi-0.2.0-linux-x86_64.tar.gz) |
 
 On macOS, open the disk image and copy Skribi to Applications. On Windows,
 extract the archive and run `skribi.exe`. On Linux, extract the archive and run
@@ -70,11 +65,21 @@ translations, with locally hidden recommendations.
 
 ## Privacy
 
-No account, analytics, advertising, document upload, or cloud sync. Opening a
-Library fetches the public catalog from [mouseia.org](https://mouseia.org/);
-adding a work fetches its text. External Markdown links may open a browser.
-Settings remember workspace paths and hidden recommendations; ZIP imports use
-temporary storage. See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md).
+Skribi sends nothing over the network for local reading, writing, importing, or
+exporting. There is no telemetry, analytics, crash reporting, account, document
+upload, cloud sync, or automatic update check.
+
+The Mouseia catalog is opt-in on every launch: **Browse Mouseia catalog**
+requests the public catalog from [mouseia.org](https://mouseia.org/), and **Add**
+fetches that work's text into your library. Mouseia sees a normal web request
+(including your IP), not your notes or file paths. Links you click open in your
+browser and follow that site's policy. Fonts are bundled.
+
+Skribi stores workspace paths and hidden recommendations in OS app data, and
+Retex edit history in `.retex/history.jsonl` in your library (50 versions per
+file). Files it writes are owner-only on Unix. Delete `.retex` to remove edit
+history, delete Skribi's app-data folder to forget settings, and delete exported
+packages you no longer want. See [PRIVACY.md](PRIVACY.md).
 
 ## Build from source
 

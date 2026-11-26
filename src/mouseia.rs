@@ -93,6 +93,7 @@ pub fn save_work(root: &Path, work: &Work) -> Result<PathBuf> {
         ));
     }
     fs::create_dir_all(&directory)?;
+    crate::restrict_to_owner(&directory, true)?;
     let path = directory.join(format!("{}.md", work.slug));
     if path.exists() && fs::symlink_metadata(&path)?.file_type().is_symlink() {
         return Err(Error::Invalid(
@@ -103,6 +104,7 @@ pub fn save_work(root: &Path, work: &Work) -> Result<PathBuf> {
     use std::io::Write as _;
     output.write_all(render_work(work).as_bytes())?;
     output.commit()?;
+    crate::restrict_to_owner(&path, false)?;
     Ok(path)
 }
 
